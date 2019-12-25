@@ -49,20 +49,26 @@ import sun.security.util.SecurityConstants;
  * ExecutorService}, {@link ScheduledExecutorService}, {@link
  * ThreadFactory}, and {@link Callable} classes defined in this
  * package. This class supports the following kinds of methods:
+ * 翻译：这个包中定义的Executor，ExecutorService，ScheduledExecutorService，ThreadFactory，Callable类的工厂和实用方法。这个类支持以下几种方法：
  *
  * <ul>
  *   <li> Methods that create and return an {@link ExecutorService}
  *        set up with commonly useful configuration settings.
+ *        创建和返回一个ExecutorService，并设置常用的配置。
  *   <li> Methods that create and return a {@link ScheduledExecutorService}
  *        set up with commonly useful configuration settings.
+ *        创建和返回一个ScheduledExecutorService，并设置常用的配置。
  *   <li> Methods that create and return a "wrapped" ExecutorService, that
  *        disables reconfiguration by making implementation-specific methods
  *        inaccessible.
+ *        创建和返回一个ExecutorService的wrapped（包装），通过不可访问特定的实现方法来禁用对ExecutorService的重新配置。
  *   <li> Methods that create and return a {@link ThreadFactory}
  *        that sets newly created threads to a known state.
+ *        创建和返回一个ThreadFactory，设置新创建线程为一个已知的状态。
  *   <li> Methods that create and return a {@link Callable}
  *        out of other closure-like forms, so they can be used
  *        in execution methods requiring {@code Callable}.
+ *        从其他类似关闭的表单中？？？创建和返回一个Callable，因此可以在需要Callable的执行方法中使用它们。
  * </ul>
  *
  * @since 1.5
@@ -412,9 +418,10 @@ public class Executors {
     /**
      * Returns a {@link Callable} object that, when
      * called, runs the given task and returns {@code null}.
-     * @param task the task to run
-     * @return a callable object
-     * @throws NullPointerException if task null
+     * 翻译：返回一个Callable对象，当调用该对象时，运行给定的任务并返回null
+     * @param task the task to run 要运行的任务
+     * @return a callable object 返回一个callable对象
+     * @throws NullPointerException if task null 如果任务为空则抛出NullPointerException
      */
     public static Callable<Object> callable(Runnable task) {
         if (task == null)
@@ -501,7 +508,10 @@ public class Executors {
 
     /**
      * A callable that runs given task and returns given result
+     * 翻译：运行给定任务并返回给定结果的 可调用程序
      */
+    // RunnableAdapter 是转化 Runnable 成 Callable 的工具类
+    // 这里是一个典型的适配模型。我们要把 Runnable 适配成 Callable，首先要实现 Callable 的接口，接着在 Callable 的 call 方法里面调用被适配对象（Runnable）的方法
     static final class RunnableAdapter<T> implements Callable<T> {
         final Runnable task;
         final T result;

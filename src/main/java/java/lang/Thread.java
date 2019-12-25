@@ -54,6 +54,9 @@ import sun.security.util.SecurityConstants;
  * thread has its priority initially set equal to the priority of the
  * creating thread, and is a daemon thread if and only if the
  * creating thread is a daemon.
+ * 翻译：一个thread是一个在程序里执行的线程。jvm允许一个应用程序同时有多个执行的线程在运行。
+ * 每个线程有一个优先级。优先级高的线程优先于优先级低的线程执行。每个线程可能被标记为或者不被标记为守护进程。当在某些线程中运行的代码创建一个新的Thread对象时，新线程的优先级最初设置为与创建线程的优先级相等，并且只有当创建线程是守护进程时，它才是守护进程。
+ * in preference to：优先于……
  *
  * 每个线程都有优先级，高优先级的线程可能会优先执行
  * 父线程创建子线程后，父子线程的优先级和是否是守护线程都是一致的
@@ -64,16 +67,19 @@ import sun.security.util.SecurityConstants;
  * <code>main</code> of some designated class). The Java Virtual
  * Machine continues to execute threads until either of the following
  * occurs:
+ * 翻译：当jvm启动时，通常有一个非守护线程（代表性的就是调用一些指定的类的main方法）。jvm继续执行线程，直到以下任何一种情况发生：
  * jvm 启动时，通常都启动 main 非守护线程，发生一下两个任意一个时，就会停止
  * <ul>
  * <li>The exit method of class Runtime has been
  *     called and the security manager has permitted the exit operation
  *     to take place.
+ *     翻译：类运行时的退出方法已被调用，且安全管理器已允许退出操作的发生。
  *     类退出方法被调用，并且安全机制允许这么做
  * <li>All threads that are not daemon threads have died, either by
  *     returning from the call to the <code>run</code> method or by
  *     throwing an exception that propagates beyond the <code>run</code>
  *     method.
+ *     翻译：所有不是守护线程的线程都已经死亡，要么从调用的run方法返回，要么抛出一个在run方法之外传播的异常。
  *     所有非守护线程都消亡。
  *     或者从运行的方法正常返回，或者运行的方法抛出了异常
  * </ul>
@@ -87,6 +93,7 @@ import sun.security.util.SecurityConstants;
  * <code>Thread</code>. An instance of the subclass can then be
  * allocated and started. For example, a thread that computes primes
  * larger than a stated value could be written as follows:
+ * 翻译：创建新执行线程有两种方法。一个是将一个类声明为Thread的子类。这个子类应该重写Thread类的run方法。然后可以分配和启动子类的实例。例如，计算大于给定值的质数的线程可以像下面这样写：
  * <hr><blockquote><pre>
  *     class PrimeThread extends Thread {
  *         long minPrime;
@@ -102,6 +109,7 @@ import sun.security.util.SecurityConstants;
  * </pre></blockquote><hr>
  * <p>
  * The following code would then create a thread and start it running:
+ * 翻译：下面的代码将创建一个线程然后开始运行它：
  * <blockquote><pre>
  *     PrimeThread p = new PrimeThread(143);
  *     p.start();
@@ -113,6 +121,7 @@ import sun.security.util.SecurityConstants;
  * then be allocated, passed as an argument when creating
  * <code>Thread</code>, and started. The same example in this other
  * style looks like the following:
+ * 翻译：创建线程的另一种方法是声明一个实现Runnable接口的类。然后该类实现run方法。然后可以分配该类的实例，并在创建Thread时作为参数传递，然后启动。相同的例子在这个风格下可以像下面这样写：
  * <hr><blockquote><pre>
  *     class PrimeRun implements Runnable {
  *         long minPrime;
@@ -128,6 +137,7 @@ import sun.security.util.SecurityConstants;
  * </pre></blockquote><hr>
  * <p>
  * The following code would then create a thread and start it running:
+ * 翻译：下面的代码将创建一个线程然后开始运行它：
  * <blockquote><pre>
  *     PrimeRun p = new PrimeRun(143);
  *     new Thread(p).start();
@@ -141,6 +151,8 @@ import sun.security.util.SecurityConstants;
  * Unless otherwise noted, passing a {@code null} argument to a constructor
  * or method in this class will cause a {@link NullPointerException} to be
  * thrown.
+ * 翻译：每个线程都有一个用于标识的名称。多个线程可能具有相同的名称。如果在创建线程时未指定名称，则为其生成新名称。
+ * 除非另有说明，不然将null参数传递给该类中的构造函数或方法将会导致抛出NullPointerException。
  *
  * @author  unascribed
  * @see     Runnable
@@ -152,6 +164,7 @@ import sun.security.util.SecurityConstants;
 public
 class Thread implements Runnable {
     /* Make sure registerNatives is the first thing <clinit> does. */
+    /* 确保会先执行registernative()方法 */
     private static native void registerNatives();
     static {
         registerNatives();
@@ -165,9 +178,11 @@ class Thread implements Runnable {
     private long           eetop;
 
     /* Whether or not to single_step this thread. */
+    /* 线程是否是single_step（单步执行？）。 */
     private boolean     single_step;
 
     /* Whether or not the thread is a daemon thread. */
+    /* 线程是否是守护线程 */
     // 是否是守护线程，true 是守护线程
     // 如果是守护线程的话，是不能够阻止 JVM 的退出的，级别很低
     private boolean     daemon = false;
@@ -176,6 +191,7 @@ class Thread implements Runnable {
     private boolean     stillborn = false;
 
     /* What will be run. */
+    // new Thread时赋值
     private Runnable target;
 
     /* The group of this thread */
@@ -266,13 +282,14 @@ class Thread implements Runnable {
     // 普通优先级，也是默认的
     public final static int NORM_PRIORITY = 5;
 
-    // 最大优先级
+    // 最高优先级
     public final static int MAX_PRIORITY = 10;
 
     /**
      * Returns a reference to the currently executing thread object.
+     * 翻译：返回当前执行的线程对象的引用
      *
-     * @return  the currently executing thread.
+     * @return  the currently executing thread. 当前执行的线程
      */
     // 返回当前线程的引用
     public static native Thread currentThread();
@@ -293,8 +310,8 @@ class Thread implements Runnable {
      * concurrency control constructs such as the ones in the
      * {@link java.util.concurrent.locks} package.
      */
-    // 当前线程做出让步，放弃当前 cpu，让线程重新选择 cpu，避免线程过度使用 cpu
-    // 让步不是不执行，也有可能重新选中自己
+    // 当前线程做出让步，放弃当前 cpu，让cpu 重新选择线程，避免线程过度使用 cpu
+    // 让步不是不执行，重新竞争时，cpu 也有可能重新选中自己
     public static native void yield();
 
     /**
@@ -351,7 +368,7 @@ class Thread implements Runnable {
             throw new IllegalArgumentException(
                                 "nanosecond timeout value out of range");
         }
-        // 纳秒大于 0.5 毫秒，算一个毫秒
+        // 如果给定纳秒大于等于 0.5 毫秒，算一个毫秒
         if (nanos >= 500000 || (nanos != 0 && millis == 0)) {
             millis++;
         }
@@ -370,17 +387,19 @@ class Thread implements Runnable {
 
     /**
      * Initializes a Thread.
+     * 翻译：初始化一个线程。
      *
-     * @param g the Thread group
-     * @param target the object whose run() method gets called
-     * @param name the name of the new Thread
+     * @param g the Thread group 线程组
+     * @param target the object whose run() method gets called run()方法被调用的对象
+     * @param name the name of the new Thread 新线程的名字
      * @param stackSize the desired stack size for the new thread, or
-     *        zero to indicate that this parameter is to be ignored.
+     *        zero to indicate that this parameter is to be ignored. 新线程预期的堆栈大小，或者0表示这个参数将被忽略。
      * @param acc the AccessControlContext to inherit, or
-     *            AccessController.getContext() if null
+     *            AccessController.getContext() if null 继承AccessControlContext，或者如果为空则取AccessController.getContext()
      */
     // g 代表线程组，线程组可以对组内的线程进行批量的操作，比如批量的打断 interrupt
     // target 是我们要运行的对象
+    // name 我们可以自己传，如果不传默认是 "Thread-" + nextThreadNum()，nextThreadNum 方法返回的是自增的数字
     // stackSize 可以设置堆栈的大小
     private void init(ThreadGroup g, Runnable target, String name,
                       long stackSize, AccessControlContext acc) {
@@ -396,15 +415,18 @@ class Thread implements Runnable {
         SecurityManager security = System.getSecurityManager();
         if (g == null) {
             /* Determine if it's an applet or not */
+            /* 确定它是否是applet */
 
             /* If there is a security manager, ask the security manager
                what to do. */
+            /* 如果有安全管理器，从安全管理器中拿线程组 */
             if (security != null) {
                 g = security.getThreadGroup();
             }
 
             /* If the security doesn't have a strong opinion of the matter
                use the parent thread group. */
+            /* 如果没有安全管理器，用父线程的线程组 */
             if (g == null) {
                 g = parent.getThreadGroup();
             }
@@ -412,10 +434,12 @@ class Thread implements Runnable {
 
         /* checkAccess regardless of whether or not threadgroup is
            explicitly passed in. */
+        /* 不管是否显式地传入线程组都要做checkAccess */
         g.checkAccess();
 
         /*
          * Do we have the required permissions?
+         * 我们有必要的权限吗?
          */
         if (security != null) {
             if (isCCLOverridden(getClass())) {
@@ -445,6 +469,7 @@ class Thread implements Runnable {
             this.inheritableThreadLocals =
                 ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
         /* Stash the specified stack size in case the VM cares */
+        /* 保存指定的堆栈大小以防VM关心 */
         this.stackSize = stackSize;
 
         /* Set thread ID */
@@ -470,7 +495,9 @@ class Thread implements Runnable {
      * {@code (null, null, gname)}, where {@code gname} is a newly generated
      * name. Automatically generated names are of the form
      * {@code "Thread-"+}<i>n</i>, where <i>n</i> is an integer.
+     * 翻译：分配一个新Thread对象。这个构造函数和Thread(ThreadGroup,Runnable,String)参数(null, null, gname)有相同的作用，其中gname是一个新生成的名字。自动生成的名字是form里的"Thread-"+n，这里n是一个整数。
      */
+    // 无参构造器，线程名字自动生成
     public Thread() {
         init(null, null, "Thread-" + nextThreadNum(), 0);
     }
@@ -718,9 +745,12 @@ class Thread implements Runnable {
      * It is never legal to start a thread more than once.
      * In particular, a thread may not be restarted once it has completed
      * execution.
+     * 翻译：使该线程开始执行；jvm会调用该线程的run方法。
+     * 结果是两个线程同时运行：当前线程(调用start方法返回的线程)和另一个线程(执行其run方法的线程)。
+     * 多次启动一个线程是不合法的。特别是，线程在执行完成后可能不会被重新启动。
      *
      * @exception  IllegalThreadStateException  if the thread was already
-     *               started.
+     *               started. 如果线程已经被启动
      * @see        #run()
      * @see        #stop()
      */
@@ -730,21 +760,25 @@ class Thread implements Runnable {
          * This method is not invoked for the main method thread or "system"
          * group threads created/set up by the VM. Any new functionality added
          * to this method in the future may have to also be added to the VM.
+         * 翻译：对于由VM创建/设置的主方法线程或“系统”组线程，该方法不会被调用。在未来任何添加到该方法中的新功能可能也必须添加到VM中。
          *
          * A zero status value corresponds to state "NEW".
+         * 翻译：零状态值对应于状态"NEW"。
          */
         // 如果没有初始化，抛异常
+        // 从这里可以看出：多次调用同一个线程的start方法，会抛出IllegalThreadStateException
         if (threadStatus != 0)
             throw new IllegalThreadStateException();
 
         /* Notify the group that this thread is about to be started
          * so that it can be added to the group's list of threads
          * and the group's unstarted count can be decremented. */
+        /* 通知group此线程即将被启动以便它能被加到group的threads list中，并且group中未启动的线程数将被减少 */
         group.add(this);
         // started 是个标识符，我们在初始化一些东西的时候，经常这么写
         boolean started = false;
         try {
-            // 这里会创建一个新的线程，执行完成之后，新的线程已经在运行了，既 target 的内容已经在运行了
+            // 这里会创建一个新的线程，执行完成之后，新的线程已经在运行了，即 target 的内容已经在运行了
             start0();
             // 这里执行的还是主线程
             started = true;
@@ -756,13 +790,16 @@ class Thread implements Runnable {
                 }
              // 这里的 catch 捕捉也是值得我们学习的，我们在工作中 catch 时也应该多用 Throwable，少用 exception
              // 比如对于异步线程抛出来的异常，Exception 是捕捉不住的，Throwable 却可以
+             // Throwable 可以捕捉一些 Exception 捕捉不到的异常，比如说子线程抛出的异常
             } catch (Throwable ignore) {
                 /* do nothing. If start0 threw a Throwable then
                   it will be passed up the call stack */
+                /* 如果start0抛出一个Throwable，那么它将被传递到调用堆栈 */
             }
         }
     }
 
+    // 开启新线程使用的是 native 方法
     private native void start0();
 
     /**
@@ -778,7 +815,7 @@ class Thread implements Runnable {
      * @see     #Thread(ThreadGroup, Runnable, String)
      */
     @Override
-    // 简单的运行，不会新起线程
+    // 简单的运行，不会新起线程，target 是 Runnable
     public void run() {
         if (target != null) {
             target.run();
@@ -942,9 +979,11 @@ class Thread implements Runnable {
      * <p> If none of the previous conditions hold then this thread's interrupt status will be set. </p>
      *
      * <p> Interrupting a thread that is not alive need not have any effect.
+     * 翻译：中断非活动的线程不一定有任何影响。
      *
      * @throws  SecurityException
      *          if the current thread cannot modify this thread
+     *          如果当前线程不能修改这个线程
      *
      * @revised 6.0
      * @spec JSR-51
@@ -1351,6 +1390,7 @@ class Thread implements Runnable {
      *
      * <p> An invocation of this method behaves in exactly the same
      * way as the invocation
+     * 此方法的调用行为与此方法的调用完全相同
      *
      * <blockquote>
      * {@linkplain #join(long) join}{@code (0)}
@@ -1360,7 +1400,9 @@ class Thread implements Runnable {
      *          if any thread has interrupted the current thread. The
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
+     *          如果任何线程中断了当前线程。当抛出InterruptedException时，当前线程的中断状态被清除
      */
+    // 当前线程等待另一个线程执行完成之后，才能继续操作
     public final void join() throws InterruptedException {
         join(0);
     }
