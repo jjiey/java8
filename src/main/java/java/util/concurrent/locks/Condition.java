@@ -193,9 +193,9 @@ import java.util.Date;
 public interface Condition {
 
     /**
-     * 使当前线程一直等待，直到被 signalled 或被打断
      * Causes the current thread to wait until it is signalled or
      * {@linkplain Thread#interrupt interrupted}.
+     * 翻译：使当前线程一直等待，直到被 signalled 或被打断
      *
      * 当以下四种情况发生时，条件队列中的线程将被唤醒
      * 1. 有线程使用了 signal 方法，正好唤醒了条件队列中的线程。
@@ -398,7 +398,7 @@ public interface Condition {
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)
      */
-    // 虽然入参可以是任意的时间，但底层仍然转化成纳秒
+    // 虽然入参可以是任意单位的时间，但底层仍然转化成纳秒
     boolean await(long time, TimeUnit unit) throws InterruptedException;
 
     /**
@@ -496,7 +496,7 @@ public interface Condition {
      * not held. Typically, an exception such as {@link
      * IllegalMonitorStateException} will be thrown.
      */
-    // 唤醒一个等待的线程，在被唤醒前必须先获得锁
+    // 唤醒条件队列中的一个等待的线程，在被唤醒前必须先获得锁
     void signal();
 
     /**
