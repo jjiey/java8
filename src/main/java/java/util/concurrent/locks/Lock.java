@@ -37,6 +37,7 @@ package java.util.concurrent.locks;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Lock 接口主要定义了各种加锁，释放锁的方法
  * {@code Lock} implementations provide more extensive locking
  * operations than can be obtained using {@code synchronized} methods
  * and statements.  They allow more flexible structuring, may have
@@ -167,6 +168,7 @@ import java.util.concurrent.TimeUnit;
 public interface Lock {
 
     /**
+     * 获得锁方法，获取不到锁的线程会到同步队列中阻塞排队
      * Acquires the lock.
      *
      * <p>If the lock is not available then the current thread becomes
@@ -181,10 +183,10 @@ public interface Lock {
      * circumstances and the exception type must be documented by that
      * {@code Lock} implementation.
      */
-    // 获得锁
     void lock();
 
     /**
+     * 获取可中断的锁
      * Acquires the lock unless the current thread is
      * {@linkplain Thread#interrupt interrupted}.
      *
@@ -230,10 +232,10 @@ public interface Lock {
      *         interrupted while acquiring the lock (and interruption
      *         of lock acquisition is supported)
      */
-    // 获取可中断的锁
     void lockInterruptibly() throws InterruptedException;
 
     /**
+     * 尝试获得锁，如果锁空闲，立马返回 true，否则返回 false
      * Acquires the lock only if it is free at the time of invocation.
      *
      * <p>Acquires the lock if it is available and returns immediately
@@ -260,10 +262,10 @@ public interface Lock {
      * @return {@code true} if the lock was acquired and
      *         {@code false} otherwise
      */
-    // 锁空闲，立马返回true，否则返回 false
     boolean tryLock();
 
     /**
+     * 带有超时等待时间的锁，如果超时时间到了，仍然没有获得锁，返回 false
      * Acquires the lock if it is free within the given waiting time and the
      * current thread has not been {@linkplain Thread#interrupt interrupted}.
      *
@@ -321,10 +323,10 @@ public interface Lock {
      *         while acquiring the lock (and interruption of lock
      *         acquisition is supported)
      */
-    // 带有超时等待时间的锁，如果超时时间到了，仍然没有获得锁，返回 false
     boolean tryLock(long time, TimeUnit unit) throws InterruptedException;
 
     /**
+     * 释放锁
      * Releases the lock.
      *
      * <p><b>Implementation Considerations</b>
@@ -336,10 +338,10 @@ public interface Lock {
      * Any restrictions and the exception
      * type must be documented by that {@code Lock} implementation.
      */
-    // 释放锁
     void unlock();
 
     /**
+     * 得到新的 Condition
      * Returns a new {@link Condition} instance that is bound to this
      * {@code Lock} instance.
      *
@@ -358,6 +360,5 @@ public interface Lock {
      * @throws UnsupportedOperationException if this {@code Lock}
      *         implementation does not support conditions
      */
-    // 得到新的 Condition
     Condition newCondition();
 }

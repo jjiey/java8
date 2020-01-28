@@ -37,6 +37,10 @@ package java.util.concurrent;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
+ * 主要有两种形式的等待：
+ * 1.让一组线程在全部启动完成之后，再一起执行（先启动的线程需要阻塞等待后启动的线程，直到一组线程全部都启动完成后，再一起执行）；
+ * 2.主线程等待另外一组线程都执行完成之后，再继续执行。
+ *
  * 同步器可以帮助一个或一组线程等待，直到等待的线程执行完成之后再执行
  * A synchronization aid that allows one or more threads to wait until
  * a set of operations being performed in other threads completes.
@@ -163,6 +167,7 @@ public class CountDownLatch {
     private static final class Sync extends AbstractQueuedSynchronizer {
         private static final long serialVersionUID = 4982264981922014374L;
 
+        // 可以把 count 看做希望等待的一组线程的个数，可能是等待一组线程全部启动完成，也可能是等待一组线程全部执行完成
         Sync(int count) {
             setState(count);
         }
@@ -175,8 +180,12 @@ public class CountDownLatch {
         protected int tryAcquireShared(int acquires) {
             return (getState() == 0) ? 1 : -1;
         }
-        // 对 state 进行递减，直到 state 变成 0；
-        // state 递减为 0 时，返回 true，其余返回 false
+
+        /**
+         * 对 state 进行递减，直到 state 变成 0；
+         * @param releases
+         * @return 如果 state 递减为 0 时，返回 true，其余返回 false
+         */
         protected boolean tryReleaseShared(int releases) {
             // 自旋保证 CAS 一定可以成功
             for (;;) {
@@ -198,7 +207,7 @@ public class CountDownLatch {
      * Constructs a {@code CountDownLatch} initialized with the given count.
      *
      * @param count the number of times {@link #countDown} must be invoked
-     *        before threads can pass through {@link #await}
+     *        before threads can pass through {@link #await} 代表 state 的初始化值
      * @throws IllegalArgumentException if {@code count} is negative
      */
     public CountDownLatch(int count) {
@@ -271,7 +280,7 @@ public class CountDownLatch {
      * is returned.  If the time is less than or equal to zero, the method
      * will not wait at all.
      *
-     * @param timeout the maximum time to wait
+     * @param timeout the maximum time to wait 超时时间，最终都会转化成毫秒
      * @param unit the time unit of the {@code timeout} argument
      * @return {@code true} if the count reached zero and {@code false}
      *         if the waiting time elapsed before the count reached zero

@@ -74,19 +74,34 @@ public class AtomicInteger extends Number implements java.io.Serializable {
      */
     private volatile int value;
 
-    // 初始化
+    /**
+     * 初始化
+     * @param initialValue 初始值
+     */
     public AtomicInteger(int initialValue) {
         value = initialValue;
     }
-    // 得到当前值
+
+    /**
+     * 得到当前值
+     * @return 当前值
+     */
     public final int get() {
         return value;
     }
-    // 自增 1，并返回自增之前的值
+
+    /**
+     * 自增 1
+     * @return 返回自增之前的值
+     */
     public final int getAndIncrement() {
         return unsafe.getAndAddInt(this, valueOffset, 1);
     }
-    // 自减 1，并返回自增之前的值
+
+    /**
+     * 自减 1
+     * @return 返回自减之前的值
+     */
     public final int getAndDecrement() {
         return unsafe.getAndAddInt(this, valueOffset, -1);
     }

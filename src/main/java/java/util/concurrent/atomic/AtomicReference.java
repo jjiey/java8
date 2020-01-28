@@ -182,6 +182,8 @@ public class AtomicReference<V> implements java.io.Serializable {
     }
 
     /**
+     * 对 x 执行 accumulatorFunction 操作
+     *  accumulatorFunction 是个函数，可以自定义想做的事情
      * Atomically updates the current value with the results of
      * applying the given function to the current and given values,
      * returning the previous value. The function should be
@@ -192,12 +194,9 @@ public class AtomicReference<V> implements java.io.Serializable {
      *
      * @param x the update value
      * @param accumulatorFunction a side-effect-free function of two arguments
-     * @return the previous value
+     * @return the previous value 返回旧值
      * @since 1.8
      */
-    // 对 x 执行 accumulatorFunction 操作
-    // accumulatorFunction 是个函数，可以自定义想做的事情
-    // 返回老值
     public final V getAndAccumulate(V x,
                                     BinaryOperator<V> accumulatorFunction) {
         // prev 是老值，next 是新值
@@ -205,6 +204,7 @@ public class AtomicReference<V> implements java.io.Serializable {
         // 自旋 + CAS 保证一定可以替换老值
         do {
             prev = get();
+            // 执行自定义操作
             next = accumulatorFunction.apply(prev, x);
         } while (!compareAndSet(prev, next));
         return prev;
