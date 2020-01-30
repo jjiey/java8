@@ -70,14 +70,13 @@ public abstract class AbstractOwnableSynchronizer
     private transient Thread exclusiveOwnerThread;
 
     /**
+     * 获得锁的线程 set 进来就好了
      * Sets the thread that currently owns exclusive access.
      * A {@code null} argument indicates that no thread owns access.
      * This method does not otherwise impose any synchronization or
      * {@code volatile} field accesses.
      * @param thread the owner thread 所有者线程
      * 翻译：设置当前拥有独占访问权的线程。参数null表明没有线程拥有访问权限。此方法不强制任何同步或volatile字段访问。
-     *
-     * 获得锁的线程 set 进来就好了
      */
     protected final void setExclusiveOwnerThread(Thread thread) {
         exclusiveOwnerThread = thread;

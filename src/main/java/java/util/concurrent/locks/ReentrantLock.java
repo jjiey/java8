@@ -118,7 +118,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
     /**
      * Sync 继承了 AQS，使用了 AQS 的 state 字段代表当前锁的计算
-     * 两个子类都只实现了lock和tryAcquire两个方法
+     * 两个子类都分别实现它们的lock和tryAcquire两个方法，因为只有加锁时才分公不公平
      */
     abstract static class Sync extends AbstractQueuedSynchronizer {
         private static final long serialVersionUID = -5179523762034025860L;
@@ -132,6 +132,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
         /**
          * 尝试获得非公平锁
          * tryLock() 和 非公平锁NonfairSync#tryAcquire(int) 的底层都是直接调用该方法
+         * 这个方法为什么不写在NonfairSync类里（像FairSync类一样）？唯一能想到的解释就是在tryLock()里不用new NonfairSync()或new FairSync()都可以直接进行调用
          */
         final boolean nonfairTryAcquire(int acquires) {
             final Thread current = Thread.currentThread();
@@ -145,7 +146,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
                     return true;
                 }
             }
-            // 如果当前线程已经持有锁了，同一个线程可以对同一个资源重复加锁，代码实现的是可重入锁
+            // 可重入锁代码实现：如果当前线程已经持有锁了，同一个线程可以对同一个资源重复加锁
             else if (current == getExclusiveOwnerThread()) {
                 // 当前线程持有锁的数量 + acquires
                 int nextc = c + acquires;
@@ -160,13 +161,13 @@ public class ReentrantLock implements Lock, java.io.Serializable {
         }
 
         /**
-         * 释放锁方法，Sync 提供的 tryRelease 默认实现，非公平和公平锁都使用
-         * 因为在锁释放的时候，是没有公平和非公平的说法的
+         * 释放锁方法，Sync 提供的 tryRelease 默认实现
+         * 非公平和公平锁都使用，因为在锁释放的时候，没有公平和非公平的说法
          */
         protected final boolean tryRelease(int releases) {
             // 当前同步器的状态减去释放的个数，releases 一般为 1
             int c = getState() - releases;
-            // 当前线程不持有锁，报错
+            // 如果不是当前线程持有该锁，报错
             if (Thread.currentThread() != getExclusiveOwnerThread())
                 throw new IllegalMonitorStateException();
             boolean free = false;
@@ -180,7 +181,10 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             return free;
         }
 
-        // 是否是当前线程持有锁
+        /**
+         * 是否是当前线程持有锁
+         * @return 是返回 true，否则返回 false
+         */
         protected final boolean isHeldExclusively() {
             // While we must in general read state before owner,
             // we don't need to do so to check if current thread is owner
@@ -191,16 +195,27 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             return new ConditionObject();
         }
 
+        /**
+         * 获取持有锁的线程
+         * @return 持有锁的线程
+         */
         // Methods relayed from outer class
-        // 持有锁的线程是谁
         final Thread getOwner() {
             return getState() == 0 ? null : getExclusiveOwnerThread();
         }
-        // 线程持有同一个锁的数量
+
+        /**
+         * 获取线程持有同一个锁的数量
+         * @return 线程持有同一个锁的数量
+         */
         final int getHoldCount() {
             return isHeldExclusively() ? getState() : 0;
         }
 
+        /**
+         * 该资源是否被加锁
+         * @return 是返回 true，否则返回 false
+         */
         final boolean isLocked() {
             return getState() != 0;
         }
@@ -236,7 +251,10 @@ public class ReentrantLock implements Lock, java.io.Serializable {
                 // 会再次尝试获得锁，失败会进入到同步队列中
                 acquire(1);
         }
-        // 直接使用的是 Sync.nonfairTryAcquire 方法
+
+        /**
+         * 直接使用 Sync.nonfairTryAcquire 方法
+         */
         protected final boolean tryAcquire(int acquires) {
             return nonfairTryAcquire(acquires);
         }
@@ -260,9 +278,8 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             final Thread current = Thread.currentThread();
             int c = getState();
             if (c == 0) {
-                // hasQueuedPredecessors 是实现公平的关键
-                // 会判断当前线程是不是属于同步队列的头节点的下一个节点(头节点是释放锁的节点)
-                // 如果是(返回false)，符合先进先出的原则，可以获得锁；如果不是(返回true)，则继续等待
+                // hasQueuedPredecessors 方法是实现公平的关键，该方法在 AbstractQueuedSynchronizer 类里实现，因为 ReentrantReadWriteLock 也要调用该方法
+                // 会判断当前线程是不是属于同步队列的头节点的下一个节点(头节点是释放锁的节点)，如果是(返回false)，符合先进先出的原则，可以获得锁；如果不是(返回true)，则继续等待
                 if (!hasQueuedPredecessors() &&
                     compareAndSetState(0, acquires)) {
                     setExclusiveOwnerThread(current);
@@ -392,8 +409,8 @@ public class ReentrantLock implements Lock, java.io.Serializable {
      *         thread; and {@code false} otherwise
      */
     public boolean tryLock() {
-        // 直接走非公平锁实现，无公平锁的实现
-        // 入参数是 1 表示尝试获得一次锁
+        // 直接走非公平锁实现，无公平锁的实现。入参数是 1 表示尝试获得一次锁
+        // 如果在公平锁里调用该方法，那么该线程会直接去尝试加锁。为什么这里不用在乎公平性？想了想这个方法的目的本来就是想tryLock（尝试加锁），看看锁现在能不能获取到，所以不管是公平锁或非公平锁都应该直接去尝试加锁。而tryLock(long timeout, TimeUnit unit)规定了超时时间，既然有超时时间那就要区分公平锁或非公平锁，不然超时时间就没有了意义。
         return sync.nonfairTryAcquire(1);
     }
 
