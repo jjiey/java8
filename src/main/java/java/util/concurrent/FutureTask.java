@@ -341,14 +341,14 @@ public class FutureTask<V> implements RunnableFuture<V> {
      * 如果需要开启子线程的话，只能走线程池，线程池会帮忙开启线程
      */
     public void run() {
-        // 状态不是任务创建，或者当前任务已经有线程在执行了，直接返回
+        // 状态不是NEW || 当前任务已经有线程在执行了，就直接返回
         if (state != NEW ||
             !UNSAFE.compareAndSwapObject(this, runnerOffset,
                                          null, Thread.currentThread()))
             return;
         try {
             Callable<V> c = callable;
-            // Callable 不为空，并且已经初始化完成
+            // 如果 Callable 不为空，并且已经初始化完成
             if (c != null && state == NEW) {
                 V result;
                 boolean ran;
@@ -368,11 +368,11 @@ public class FutureTask<V> implements RunnableFuture<V> {
         } finally {
             // runner must be non-null until state is settled to
             // prevent concurrent calls to run()
-            // 运行程序必须是非空的，直到确定状态为止以防止对run()的并发调用。
+            // 翻译：运行程序必须是非空的，直到确定状态为止以防止对run()的并发调用。
             runner = null;
             // state must be re-read after nulling runner to prevent
             // leaked interrupts
-            // 为防止泄露的中断，在运行程序为空之后必须重新读取状态
+            // 翻译：为防止泄露的中断，在运行程序为空之后必须重新读取状态
             int s = state;
             if (s >= INTERRUPTING)
                 handlePossibleCancellationInterrupt(s);

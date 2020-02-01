@@ -47,10 +47,12 @@ import java.util.*;
  * returned. Subclasses may override the {@code newTaskFor} methods
  * to return {@code RunnableFuture} implementations other than
  * {@code FutureTask}.
+ * 翻译：提供ExecutorService方法的默认实现。这个类用newTaskFor方法返回的RunnableFuture实现submit、invokeAny和invokeAll方法，newTaskFor方法默认为这个包中提供FutureTask类。例如，submit(Runnable)方法的实现创建了一个执行并返回的联合RunnableFuture。子类可以重写newTaskFor方法来返回不同于FutureTask的RunnableFuture实现。
  *
  * <p><b>Extension example</b>. Here is a sketch of a class
  * that customizes {@link ThreadPoolExecutor} to use
  * a {@code CustomTask} class instead of the default {@code FutureTask}:
+ * 翻译：扩展示例。下面是一个类的示意图，它定制ThreadPoolExecutor来使用CustomTask类代替默认的FutureTask
  *  <pre> {@code
  * public class CustomThreadPoolExecutor extends ThreadPoolExecutor {
  *
@@ -84,8 +86,8 @@ public abstract class AbstractExecutorService implements ExecutorService {
      * @since 1.6
      */
     // 把 Runnable 转化成 RunnableFuture
-    // RunnableFuture 是一个接口，实现了 Runnable 和 Future
-    // FutureTask 是 RunnableFuture 的实现类，主要是对任务进行各种管理
+    // RunnableFuture 是一个接口，实现了 Runnable 和 Future，FutureTask 是 RunnableFuture 的实现类，主要是对任务进行各种管理
+    // 关系：FutureTask implements RunnableFuture extends Runnable, Future
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return new FutureTask<T>(runnable, value);
     }
@@ -106,12 +108,16 @@ public abstract class AbstractExecutorService implements ExecutorService {
     }
 
     /**
+     * 提交无返回值的任务
+     *
      * @throws RejectedExecutionException {@inheritDoc}
      * @throws NullPointerException       {@inheritDoc}
      */
     public Future<?> submit(Runnable task) {
         if (task == null) throw new NullPointerException();
+        // ftask 其实就是 FutureTask
         RunnableFuture<Void> ftask = newTaskFor(task, null);
+        // execute 方法是其子类 ThreadPoolExecutor 实现的
         execute(ftask);
         return ftask;
     }
@@ -122,18 +128,24 @@ public abstract class AbstractExecutorService implements ExecutorService {
      */
     public <T> Future<T> submit(Runnable task, T result) {
         if (task == null) throw new NullPointerException();
+        // ftask 其实就是 FutureTask
         RunnableFuture<T> ftask = newTaskFor(task, result);
+        // execute 方法是其子类 ThreadPoolExecutor 实现的
         execute(ftask);
         return ftask;
     }
 
     /**
+     * 提交有返回值的任务
+     *
      * @throws RejectedExecutionException {@inheritDoc}
      * @throws NullPointerException       {@inheritDoc}
      */
     public <T> Future<T> submit(Callable<T> task) {
         if (task == null) throw new NullPointerException();
+        // ftask 其实就是 FutureTask
         RunnableFuture<T> ftask = newTaskFor(task);
+        // execute 方法是其子类 ThreadPoolExecutor 实现的
         execute(ftask);
         return ftask;
     }
