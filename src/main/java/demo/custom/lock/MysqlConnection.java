@@ -1,4 +1,4 @@
-package demo.customLock;
+package demo.custom.lock;
 
 import java.sql.Connection;
 
