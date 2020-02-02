@@ -42,7 +42,13 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 
 /**
- * 插入操作的完成必须等待另一个线程完成相应的删除操作，反之亦然
+ * SynchronousQueue 是比较独特的队列，其本身是没有容量大小，比如我放一个数据到队列中，我是不能够立马返回的，我必须等待别人把我放进去的数据消费掉了，才能够返回。SynchronousQueue 在消息队列技术中间件中被大量使用
+ * SynchronousQueue 的整体设计比较抽象，在内部抽象出了两种算法实现，一种是先入先出的队列，一种是后入先出的堆栈，两种算法被两个内部类实现，而直接对外的 put，take 方法的实现就非常简单，都是直接调用两个内部类的 transfer 方法进行实现
+ *
+ * 队列不存储数据，所以没有大小，也无法迭代；
+ * 队列由两种数据结构组成，分别是后入先出的堆栈和先入先出的队列，堆栈是非公平的，队列是公平的。
+ *
+ * 插入操作的完成（返回）必须等待另一个线程完成相应数据的删除操作，反之亦然
  * A {@linkplain BlockingQueue blocking queue} in which each insert
  * operation must wait for a corresponding remove operation by another
  * thread, and vice versa(反之亦然).
@@ -174,44 +180,57 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
      * node has ever referred to since arrival.
      */
 
-
-
-
-
-
-
-
-    // 堆栈和双向队列共同的接口
-    // 负责执行 put or take
+    /**
+     * 堆栈和双向队列共同的接口
+     * 负责执行 put or take
+     * @param <E>
+     */
     abstract static class Transferer<E> {
-        //e为空的，会直接返回特殊值，不为空会传递给消费者
+        /**
+         * @param e 为空时，会直接返回特殊值，不为空会传递给消费者
+         * @param timed 为 true，说明会有超时时间
+         * @param nanos 超时时间
+         */
         abstract E transfer(E e, boolean timed, long nanos);
     }
 
-    // 堆栈 后入先出 非公平
-    // Scherer-Scott 算法
+    /**
+     * 堆栈 后入先出 非公平
+     * Scherer-Scott 算法
+     * @param <E>
+     */
     static final class TransferStack<E> extends Transferer<E> {
-        // 代表着执行的是  take方法
+        /**
+         * 标识执行的是 take 方法
+         */
         static final int REQUEST    = 0;
-        // 代表着执行的是 put 方法
+        /**
+         * 标识执行的是 put 方法
+         */
         static final int DATA       = 1;
-        // 栈头正在阻塞等待其他线程进行 put 或 take
+        /**
+         * 栈头正在阻塞等待其他线程进行 put 或 take
+         */
         static final int FULFILLING = 2;
-        // 栈 头
+        /**
+         * 栈头
+         */
         volatile SNode head;
-        // 栈中元素
+
+        /**
+         * 栈中元素
+         */
         static final class SNode {
             // 栈的下一个，就是被当前栈压在下面的栈元素
             volatile SNode next;
             // 节点匹配，用来判断阻塞栈元素能被唤醒的时机
-            // 假设先执行 take，此时队列中没有数据，take 被阻塞了
-            // 当有 put 操作时，会把阻塞的栈元素的 match 属性赋值
-            // 当阻塞的栈元素发现 match 有值时，就会停止阻塞
+            // 假设先执行 take，此时队列中没有数据，take 被阻塞了，栈元素为 SNode1；当有 put 操作时，会把当前 put 的栈元素赋值给 SNode1 的 match 属性，并唤醒 take 操作；当 take 被唤醒，发现 SNode1 的 match 属性有值时，就能拿到 put 进来的数据，从而返回
             volatile SNode match;
-            // 被阻塞线程，栈中元素是无法被阻塞的，是通过线程阻塞来实现的
+            // 被阻塞的线程，栈中元素是无法被阻塞的，是通过线程阻塞来实现的
             volatile Thread waiter;
-            //未投递的消息，或者未消费的消息
+            // 未投递的消息，或者未消费的消息
             Object item;
+            // 栈头的类型，对应REQUEST，DATA
             int mode;
             // Note: item and mode fields don't need to be volatile
             // since they are always written before, and read after,
@@ -299,57 +318,56 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
             return s;
         }
 
-        // transfer 方法基本思路还是满难理解，因为 task 和 put 两个方法都揉在了一起
+        // transfer 方法思路还是比较复杂蛮难理解，因为 task 和 put 两个方法都揉在了一起
         @SuppressWarnings("unchecked")
         E transfer(E e, boolean timed, long nanos) {
             SNode s = null; // constructed/reused as needed
-            // e 未空，说明是 take 方法，不为空是 put 方法
+            // e 为空说明是 take 方法，不为空是 put 方法
             int mode = (e == null) ? REQUEST : DATA;
-            //自旋
+            // 自旋
             for (;;) {
-                // 拿出头节点，有几种情况
-                // 1：头节点为空，说明队列中还没有数据
-                // 2：头节点不为空，并且是 take 类型的，说明有线程正等着拿数据。
-                // 3：头节点不为空，并且是 put 类型的，说明有线程正等着放数据。
+                // 拿出栈头节点，有几种情况：
+                // 1：栈头节点为空，说明队列中还没有数据
+                // 2：栈头节点不为空，并且是 take 类型的，说明有线程正等着拿数据。
+                // 3：栈头节点不为空，并且是 put 类型的，说明有线程正等着放数据。
                 SNode h = head;
-                // 栈头为空，说明队列中还没有数据。
-                // 栈头不为空，但栈头的类型和本次操作一致，比如都是 put，那么就把
-                // 本次 put 操作放到该栈头的前面即可，让本次 put 能够先执行
+                // 栈头节点为空，说明队列中还没有数据。
+                // 栈头节点不为空，并且栈头的类型和本次操作一致，比如都是 put，那么就把本次 put 操作放到该栈头的前面即可，让本次 put 能够先执行
                 if (h == null || h.mode == mode) {  // empty or same-mode
-                    // 设置了超时时间，并且 e 进栈或者出栈要超时了，
-                    // 就会丢弃本次操作，返回 null 值。
+                    // 设置了超时时间，并且 e 进栈或者出栈要超时了，就会丢弃本次操作，返回 null 值。
                     // 如果栈头此时被取消了，丢弃栈头，取下一个节点继续消费
                     if (timed && nanos <= 0) {      // can't wait
                         // 栈头操作被取消
                         if (h != null && h.isCancelled())
                             // 丢弃栈头，把栈头后一个元素作为栈头
                             casHead(h, h.next);     // pop cancelled node
-                        //栈头没有被匹配，直接返回false
+                        // 栈头是空的，直接返回 null
                         else
                             return null;
                     // 没有超时，直接把 e 作为新的栈头
                     } else if (casHead(h, s = snode(s, e, h, mode))) {
                         // e 等待出栈，一种是空队列 take，一种是 put
                         SNode m = awaitFulfill(s, timed, nanos);
-                        //返回s表示空队列一直没有数据，或者put的数据一直没人要
+                        // 返回s表示空队列一直没有数据，或者put的数据一直没人要
                         if (m == s) {               // wait was cancelled
                             clean(s);
                             return null;
                         }
-                        //本来s是栈头的，现在s不是栈头了，s后面又来了一个数，把新的数据作为栈头
+                        // 本来s是栈头的，现在s不是栈头了，s后面又来了一个数，把新的数据作为栈头
                         if ((h = head) != null && h.next == s)
                             casHead(h, s.next);     // help s's fulfiller
                         return (E) ((mode == REQUEST) ? m.item : s.item);
                     }
-                //栈头正在等待其他线程 put 或 take
+                // 栈头正在等待其他线程 put 或 take
+                // 比如栈头正在阻塞，并且是 put 类型，而此次操作正好是 take 类型，走此处
                 } else if (!isFulfilling(h.mode)) { // try to fulfill
-                    //栈头已经被匹配，代表已经出栈或者入栈成功了，把下一个元素作为栈头
+                    // 栈头已经被取消（被匹配），代表已经出栈或者入栈成功了，把下一个元素作为栈头
                     if (h.isCancelled())            // already cancelled
                         casHead(h, h.next);         // pop and retry
-                    // snode 第三个参数就是给的是栈头，赋值给 s 的 next
+                    // snode 方法第三个参数h就代表栈头，赋值给 s 的 next 属性
                     else if (casHead(h, s=snode(s, e, h, FULFILLING|mode))) {
                         for (;;) { // loop until matched or waiters disappear
-                            // m 就是栈头，就是阻塞住，等待本次操作的节点
+                            // m 就是栈头，通过上面 snode 方法刚刚赋值
                             SNode m = s.next;       // m is s's match
                             if (m == null) {        // all waiters are gone
                                 casHead(s, null);   // pop fulfill node
@@ -357,9 +375,9 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
                                 break;              // restart main loop
                             }
                             SNode mn = m.next;
-                            // tryMatch 两个作用：1 唤醒被阻塞的栈头 m，2 把当前节点 s 赋值给 m 的 match 属性
-                            // 这样栈头 m 被唤醒时，就能从 match 中得到本次操作 s
-                            // 其中 s.item 记录着本次的操作节点
+                            // tryMatch 非常重要的方法，两个作用：1 唤醒被阻塞的栈头 m，2 把当前节点 s 赋值给 m 的 match 属性
+                            // 这样栈头 m 被唤醒时，就能从 m.match 中得到本次操作 s
+                            // 其中 s.item 记录着本次的操作节点，也就是记录本次操作的数据
                             if (m.tryMatch(s)) {
                                 casHead(s, mn);     // pop both s and m
                                 return (E) ((mode == REQUEST) ? m.item : s.item);
@@ -413,13 +431,11 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
              * and don't wait at all, so are trapped in transfer
              * method rather than calling awaitFulfill.
              */
-            // deadline 死亡时间，如果设置了超时时间的话，死亡时间等于当前时间
-            // + 超时时间，否则就是  0
+            // deadline 死亡时间，如果设置了超时时间的话，deadline = 当前时间 + 超时时间，否则就是 0
             final long deadline = timed ? System.nanoTime() + nanos : 0L;
             Thread w = Thread.currentThread();
             // 自旋的次数，如果设置了超时时间，会自旋 32 次，否则自旋 512 次。
-            // 比如本次操作是 take 操作，自选次数后，仍没有其他线程 put 数据进来
-            // 就会阻塞，有超时时间的，会阻塞固定的时间，否则一致阻塞下去
+            // 比如本次操作是 take 操作，自旋次数后，仍没有其他线程 put 数据进来，就会阻塞，有超时时间的，会阻塞固定的时间，否则一直阻塞下去
             int spins = (shouldSpin(s) ?
                          (timed ? maxTimedSpins : maxUntimedSpins) : 0);
             for (;;) {
@@ -432,19 +448,20 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
                     return m;
                 if (timed) {
                     nanos = deadline - System.nanoTime();
+                    // 超时了，取消当前线程的等待操作
                     if (nanos <= 0L) {
                         s.tryCancel();
                         continue;
                     }
                 }
-                // 自选次数减少 1
+                // 自旋次数减少 1
                 if (spins > 0)
                     spins = shouldSpin(s) ? (spins-1) : 0;
-                // 设置
+                // 把当前线程设置成 waiter，主要是通过线程来完成阻塞和唤醒
                 else if (s.waiter == null)
                     s.waiter = w; // establish waiter so can park next iter
                 else if (!timed)
-                    // 通过 park 进行阻塞，这个我们在锁章节中会说明
+                    // 通过 park 进行阻塞
                     LockSupport.park(this);
                 else if (nanos > spinForTimeoutThreshold)
                     LockSupport.parkNanos(this, nanos);
@@ -512,7 +529,9 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
         }
     }
 
-    // 双向 队列 先入先出 公平
+    /**
+     * 双向 队列 先入先出 公平
+     */
     static final class TransferQueue<E> extends Transferer<E> {
         /*
          * This extends Scherer-Scott dual queue algorithm, differing,
@@ -523,16 +542,22 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
          * from non-null to null (for put) or vice versa (for take).
          */
 
-        /** 队列头 */
+        /**
+         * 队列头
+         */
         transient volatile QNode head;
-        /** 队列尾 */
+        /**
+         * 队列尾
+         */
         transient volatile QNode tail;
 
-        // 队列的元素
+        /**
+         * 队列元素
+         */
         static final class QNode {
             // 当前元素的下一个元素
             volatile QNode next;          // next node in queue
-            // 当前元素的值
+            // 当前元素的值，如果当前元素被阻塞住了，等其他线程来唤醒自己时，其他线程会把自己 set 到 item 里面
             volatile Object item;         // CAS'ed to or from null
             // 可以阻塞住的当前线程
             volatile Thread waiter;       // to control park/unpark
@@ -640,16 +665,16 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
         E transfer(E e, boolean timed, long nanos) {
 
             QNode s = null; // constructed/reused as needed
-            //true是put，false是get
+            // true 是 put，false 是 get
             boolean isData = (e != null);
 
             for (;;) {
-                //队列头和尾的临时变量,队列是空的时候，t=h
+                // 队列头和尾的临时变量，队列是空的时候，t=h
                 QNode t = tail;
                 QNode h = head;
-                //tail和head没有初始化时，无限循环
-                //虽然这种continue非常耗cpu，但感觉不会碰到这种情况
-                //因为tail和head在 TransferQueue初始化的时候，就已经被赋值空节点了
+                // tail和head没有初始化时，无限循环
+                // 虽然这种continue非常耗cpu，但感觉不会碰到这种情况
+                // 因为tail和head在 TransferQueue 初始化的时候，就已经被赋值空节点了
                 if (t == null || h == null)
                     continue;
                 // 首尾节点相同，说明是空队列
@@ -666,13 +691,13 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
                         advanceTail(t, tn);
                         continue;
                     }
-                    //超时直接返回 null
+                    // 超时直接返回 null
                     if (timed && nanos <= 0)        // can't wait
                         return null;
-                    //构造node节点
+                    // 构造node节点
                     if (s == null)
                         s = new QNode(e, isData);
-                    //如果把 e 放到队尾失败，继续递归放进去
+                    // 如果把 e 放到队尾失败，继续递归放进去
                     if (!t.casNext(null, s))        // failed to link in
                         continue;
 
@@ -692,12 +717,11 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
                     }
                     return (x != null) ? (E)x : e;
                 // 队列不为空，并且当前操作和队尾不一致
-                // 也就是说当前操作是对尾是对应的操作
+                // 也就是说当前操作是队尾是对应的操作
                 // 比如说对尾是因为 take 被阻塞的，那么当前操作必然是 put
                 } else {                            // complementary-mode
                     // 如果是第一次执行，此处的 m 代表就是 tail
-                    // 也就是这行代码体现出队列的公平，每次操作时，从头
-                    // 开始按照顺序进行操作
+                    // 也就是这行代码体现出队列的公平，每次操作时，从头开始按照顺序进行操作
                     QNode m = h.next;               // node to fulfill
                     if (t != tail || m == null || h != head)
                         continue;                   // inconsistent read
@@ -705,6 +729,7 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
                     Object x = m.item;
                     if (isData == (x != null) ||    // m already fulfilled
                         x == m ||                   // m cancelled
+                        // m 代表栈头
                         // 这里把当前的操作值赋值给阻塞住的 m 的 item 属性
                         // 这样 m 被释放时，就可得到此次操作的值
                         !m.casItem(x, e)) {         // lost CAS
@@ -835,17 +860,12 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
 
     private transient volatile Transferer<E> transferer;
 
-    // 默认为非公平的
+    /**
+     * @param fair true 返回 队列；false 返回 堆栈
+     */
     public SynchronousQueue(boolean fair) {
         transferer = fair ? new TransferQueue<E>() : new TransferStack<E>();
     }
-
-
-
-
-
-
-
 
     //将e放进队列，直到有另外一个线程从队列中取走，成功结束，失败打断线程
     public void put(E e) throws InterruptedException {
@@ -893,9 +913,9 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
      */
     static final long spinForTimeoutThreshold = 1000L;
 
-
-
     /**
+     * 无参构造器默认为非公平的，堆栈
+     *
      * Creates a {@code SynchronousQueue} with nonfair access policy.
      */
     public SynchronousQueue() {
@@ -908,10 +928,6 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
      * @param fair if true, waiting threads contend in FIFO order for
      *        access; otherwise the order is unspecified.
      */
-
-
-
-
 
     /**
      * Inserts the specified element into this queue, waiting if necessary
@@ -976,6 +992,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns {@code true}.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -986,6 +1004,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns zero.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -996,6 +1016,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns zero.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -1013,6 +1035,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns {@code false}.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -1024,6 +1048,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns {@code false}.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -1035,6 +1061,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Returns {@code false} unless the given collection is empty.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -1046,6 +1074,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns {@code false}.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -1057,6 +1087,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns {@code false}.
      * A {@code SynchronousQueue} has no internal capacity.
      *
@@ -1068,6 +1100,8 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 和容量相关的方法都是默认实现，因为其不存储数据
+     *
      * Always returns {@code null}.
      * A {@code SynchronousQueue} does not return elements
      * unless actively waited on.

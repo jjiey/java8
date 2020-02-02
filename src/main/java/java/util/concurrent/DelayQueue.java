@@ -57,7 +57,6 @@ import java.util.*;
  * 未过期的元素不能够被 take。
  * 不允许空元素
  *
- *
  * <p>This class and its iterator implement all of the
  * <em>optional</em> methods of the {@link Collection} and {@link
  * Iterator} interfaces.  The Iterator provided in method {@link
@@ -76,6 +75,9 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     implements BlockingQueue<E> {
 
     private final transient ReentrantLock lock = new ReentrantLock();
+    /**
+     * 优先级队列，作用是可以根据过期时间做优先级排序，让先过期的可以先执行，可用来实现：队列中元素将在过期时被执行，越靠近队头，越早过期。
+     */
     private final PriorityQueue<E> q = new PriorityQueue<E>();
 
     /**
@@ -121,6 +123,8 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     }
 
     /**
+     * 新增元素
+     *
      * Inserts the specified element into this delay queue.
      *
      * @param e the element to add
@@ -132,6 +136,8 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     }
 
     /**
+     * 新增元素
+     *
      * Inserts the specified element into this delay queue.
      *
      * @param e the element to add
@@ -145,9 +151,8 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
         try {
             // 使用 PriorityQueue 的扩容，排序等能力
             q.offer(e);
-            // 如果恰好刚放进去的元素正好在队列头
-            // 立马唤醒 take 的阻塞线程，执行 take 操作
-            // 如果元素需要延迟执行的话，可以更快的沉睡计时
+            // 如果恰好刚放进去的元素正好在队列头，立马唤醒 take 的阻塞线程，执行 take 操作
+            // 如果元素需要延迟执行的话，可以使其更快的沉睡计时
             if (q.peek() == e) {
                 leader = null;
                 available.signal();
@@ -160,6 +165,8 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     }
 
     /**
+     * 新增元素
+     *
      * Inserts the specified element into this delay queue. As the queue is
      * unbounded this method will never block.
      *
@@ -206,6 +213,8 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
     }
 
     /**
+     * 拿数据
+     *
      * Retrieves and removes the head of this queue, waiting if necessary
      * until an element with an expired delay is available on this queue.
      *
@@ -217,9 +226,9 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
         lock.lockInterruptibly();
         try {
             for (;;) {
-                // 从对头拿数据出来
+                // 从队头拿数据出来
                 E first = q.peek();
-                // 如果为空，说明队列中，没有数据，阻塞住
+                // 如果为空，说明队列中没有数据，阻塞住
                 if (first == null)
                     available.await();
                 else {
@@ -228,16 +237,17 @@ public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
                     // 如果过期了，直接返回对头数据
                     if (delay <= 0)
                         return q.poll();
-                    // 引用置为 null ，便于 gc
+                    // 引用置为 null ，便于 gc，这样可以让线程等待时，回收 first 变量
                     first = null;
-                    // 阻塞线程等待，leader 不为空的话，
-                    // 表示当前队列元素之前已经被设置过阻塞时间了
+                    // leader 不为空的话，表示当前队列元素之前已经被设置过阻塞时间了，直接阻塞当前线程等待。
                     if (leader != null)
                         available.await();
                     else {
+                        // 之前没有设置过阻塞时间，按照一定的时间进行阻塞
                         Thread thisThread = Thread.currentThread();
                         leader = thisThread;
                         try {
+                            // 进行阻塞
                             available.awaitNanos(delay);
                         } finally {
                             if (leader == thisThread)

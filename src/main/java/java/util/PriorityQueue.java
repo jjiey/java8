@@ -286,6 +286,8 @@ public class PriorityQueue<E> extends AbstractQueue<E>
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
     /**
+     * 扩容策略是：如果老容量小于 64，2 倍扩容，如果大于 64，50 % 扩容
+     *
      * Increases the capacity of the array.
      *
      * @param minCapacity the desired minimum capacity
@@ -324,6 +326,8 @@ public class PriorityQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 新增元素
+     *
      * Inserts the specified element into this priority queue.
      *
      * @return {@code true} (as specified by {@link Queue#offer})
@@ -332,14 +336,13 @@ public class PriorityQueue<E> extends AbstractQueue<E>
      *         according to the priority queue's ordering
      * @throws NullPointerException if the specified element is null
      */
-    // 新增元素
     public boolean offer(E e) {
         // 如果是空元素的话，抛异常
         if (e == null)
             throw new NullPointerException();
         modCount++;
         int i = size;
-        // 队列实际大小大于容量时，进行扩容
+        // 队列实际大小 > 容量时，进行扩容
         // 扩容策略是：如果老容量小于 64，2 倍扩容，如果大于 64，50 % 扩容
         if (i >= queue.length)
             grow(i + 1);
@@ -357,6 +360,7 @@ public class PriorityQueue<E> extends AbstractQueue<E>
         if (comparator != null)
             siftUpUsingComparator(k, x);
         else
+            // 按照从小到大的顺序排列
             siftUpComparable(k, x);
     }
 

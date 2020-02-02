@@ -49,7 +49,7 @@ import java.util.function.Consumer;
 /**
  * An optionally-bounded {@linkplain BlockingQueue blocking queue} based on
  * linked nodes.
- * 基于链表的阻塞队列
+ * 基于链表的阻塞队列，其底层的数据结构是链表
  *
  * This queue orders elements FIFO (first-in-first-out).
  * The <em>head</em> of the queue is that element that has been on the
@@ -59,7 +59,7 @@ import java.util.function.Consumer;
  * are inserted at the tail of the queue, and the queue retrieval
  * operations obtain(获得) elements at the head of the queue.
  *
- * 链表维持先入先出队列，新元素被放在队尾，获取元素从对头拿
+ * 链表维持先入先出队列，新元素被放在队尾，获取元素从队头部拿
  *
  *
  * Linked queues typically have higher throughput than array-based queues but
@@ -73,14 +73,14 @@ import java.util.function.Consumer;
  * dynamically created upon each insertion unless this would bring the
  * queue above capacity.
  *
- * 容器初始化的时候可以设置，默认是 Integer 的最大值
+ * 容器初始化的时候可以设置链表大小，默认是 Integer 的最大值
  *
  *
  * <p>This class and its iterator implement all of the
  * <em>optional</em> methods of the {@link Collection} and {@link
  * Iterator} interfaces.
  *
- * 可以使用 Collection 和 Iterator 两个接口的所有操作
+ * 可以使用 Collection 和 Iterator 两个接口的所有操作，因为实现了两者的接口
  *
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
@@ -129,48 +129,59 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
      * self-link implicitly means to advance to head.next.
      */
 
-
-
-    // 链表结构 begin
-    //链表的元素
+    /* *******== // 链表结构 begin // ==******* */
+    /**
+     * 链表元素
+     */
     static class Node<E> {
         E item;
 
-        //当前元素的下一个，为空表示当前节点是最后一个
+        // 当前元素的下一个，为空表示当前节点是最后一个
         Node<E> next;
 
         Node(E x) { item = x; }
     }
-
-    //链表的容量，默认Integer.MAX_VALUE
+    /**
+     * 链表的容量，默认Integer.MAX_VALUE
+     */
     private final int capacity;
-
-    //链表已有元素大小，使用 AtomicInteger，所以是线程安全的
+    /**
+     * 链表已有元素大小，使用 AtomicInteger，所以是线程安全的
+     */
     private final AtomicInteger count = new AtomicInteger();
-
-    //链表头
+    /**
+     * 链表头
+     */
     transient Node<E> head;
-
-    //链表尾
+    /**
+     * 链表尾
+     */
     private transient Node<E> last;
-    // 链表结构 end
+    /* *******== // 链表结构 end // ==******* */
 
-    // 锁 begin
-    //take poll 时的锁
+    /* *******== // 锁 begin // ==******* */
+    /**
+     * take poll 时的锁
+     */
     private final ReentrantLock takeLock = new ReentrantLock();
-
-    // take的条件队列，condition 可以简单理解为基于ASQ同步机制建立的条件队列
+    /**
+     * take的条件队列
+     */
     private final Condition notEmpty = takeLock.newCondition();
-
-    // put offer 时的锁，设计两把锁的目的，主要为了 take 和 put 可以同时进行
+    /**
+     * put offer 时的锁，设计两把锁的目的，主要为了 take 和 put 可以同时进行
+     */
     private final ReentrantLock putLock = new ReentrantLock();
-
-    // put的条件队列
+    /**
+     * put的条件队列
+     */
     private final Condition notFull = putLock.newCondition();
-    // 锁 end
+    /* *******== // 锁 end // ==******* */
 
-    // 迭代器
-    // 实现了自己的迭代器
+    /**
+     * 迭代器
+     * 实现了自己的迭代器
+     */
     private class Itr implements Iterator<E> {
         /*
          * Basic weakly-consistent iterator.  At all times hold the next
@@ -279,21 +290,23 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 入队，把新元素放到队尾
+     *
      * Links node at end of queue.
      *
      * @param node the node
      */
-    // 入队，把新元素放到队尾
     private void enqueue(Node<E> node) {
         last = last.next = node;
     }
 
     /**
+     * 队头中取数据
+     *
      * Removes a node from head of queue.
      *
      * @return the node
      */
-    // 队头中取数据
     private E dequeue() {
         // 取出头节点
         Node<E> h = head;
@@ -305,7 +318,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         head = first;
         // 取出链表头值
         E x = first.item;
-        // 旧头节点指向 null，帮助 GC
+        // 旧头值设置为 null，帮助 GC 回收
         first.item = null;
         // 返回旧头节点值
         return x;
@@ -336,18 +349,27 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
 //     }
 
 
-    // 不指定容量，默认 Integer 的最大值
+    /**
+     * 不指定容量，默认 Integer 的最大值
+     */
     public LinkedBlockingQueue() {
         this(Integer.MAX_VALUE);
     }
 
+    /**
+     * 指定链表容量大小，链表头尾相等，节点值（item）都是 null
+     * @param capacity 链表容量
+     */
     public LinkedBlockingQueue(int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException();
         this.capacity = capacity;
         last = head = new Node<E>(null);
     }
 
-    // 已有集合数据进行初始化
+    /**
+     * 已有集合数据进行初始化
+     * @param c 已有集合数据
+     */
     public LinkedBlockingQueue(Collection<? extends E> c) {
         this(Integer.MAX_VALUE);
         final ReentrantLock putLock = this.putLock;
@@ -358,9 +380,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                 // 集合内的元素不能为空
                 if (e == null)
                     throw new NullPointerException();
-                // capacity 代表链表的大小，在这里是 Integer 的最大值
-                // 如果集合类的大小大于 Integer 的最大值，就会报错
-                // 其实这个判断完全可以放在 for 循环外面，这样可以减少  Integer 的最大值次循环
+                // capacity 代表链表的大小，在这里是 Integer 的最大值。如果集合类的大小大于 Integer 的最大值，就会报错
+                // 其实这个判断完全可以放在 for 循环外面，这样可以减少 Integer 的最大值次循环(最坏情况)
                 if (n == capacity)
                     throw new IllegalStateException("Queue full");
                 enqueue(new Node<E>(e));
@@ -400,14 +421,16 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         return capacity - count.get();
     }
 
-
-
-    // 把e新增到队列的尾部。
-    // 如果有可以新增的空间的话，直接新增成功，否则当前线程陷入等待
+    /**
+     * 把e新增到队列的尾部
+     * 如果有可以新增的空间的话，直接新增成功，否则当前线程陷入等待
+     * @param e
+     * @throws InterruptedException
+     */
     public void put(E e) throws InterruptedException {
         // e 为空，抛出异常
         if (e == null) throw new NullPointerException();
-        //预先设置c为-1，约定负数为新增失败
+        // 预先设置c为 -1，约定负数为新增失败
         int c = -1;
         Node<E> node = new Node<E>(e);
         final ReentrantLock putLock = this.putLock;
@@ -416,20 +439,20 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         putLock.lockInterruptibly();
         try {
             // 队列满了
-            // 当前线程阻塞，等待其他线程的唤醒
+            // 当前线程阻塞，等待其他线程的唤醒(其他线程 take 成功后就会唤醒此处被阻塞的线程)
             while (count.get() == capacity) {
+                // await 无限等待
                 notFull.await();
             }
 
             // 队列没有满，直接新增到队列的尾部
             enqueue(node);
 
-            // 新增计数赋值,注意这里 getAndIncrement 返回的是旧值
+            // 新增计数赋值，注意这里 getAndIncrement 返回的是旧值
             // 这里的 c 是比真实的 count 小 1 的
             c = count.getAndIncrement();
 
-            // 如果链表现在的大小小于链表的容量，说明队列未满
-            // 可以尝试唤醒一个 put 的等待线程
+            // 如果链表现在的大小 < 链表的容量，说明队列未满，可以尝试唤醒一个 put 的等待线程
             if (c + 1 < capacity)
                 notFull.signal();
 
@@ -437,8 +460,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             // 释放锁
             putLock.unlock();
         }
-        // c==0，代表队列里面有一个元素
-        // 会尝试唤醒一个take的等待线程
+        // c == 0，代表队列里面有一个元素。此时会尝试唤醒一个take的等待线程
         if (c == 0)
             signalNotEmpty();
     }
@@ -452,34 +474,39 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
      * @throws InterruptedException {@inheritDoc}
      * @throws NullPointerException {@inheritDoc}
      */
-
     public boolean offer(E e, long timeout, TimeUnit unit)
         throws InterruptedException {
-
+        // e 为空，抛出异常
         if (e == null) throw new NullPointerException();
         long nanos = unit.toNanos(timeout);
+        // 预先设置c为 -1，约定负数为新增失败
         int c = -1;
         final ReentrantLock putLock = this.putLock;
         final AtomicInteger count = this.count;
+        // 设置可中断锁
         putLock.lockInterruptibly();
         try {
-            // 队列满了
-            // 会阻塞一段时间后，继续运行
+            // 队列满了，会阻塞一段时间后，继续运行
             while (count.get() == capacity) {
-                // 如果当前等待的时间小于等于 0 ，说明已经超过等待时间了
-                // 直接返回 false
+                // 如果当前等待的时间小于等于 0，说明已经超过等待时间了，直接返回 false（这里是和put方法主要不同的地方）
                 if (nanos <= 0)
                     return false;
                 // 阻塞等待 nanos 时间，如果超过这段时间，返回的值小于等于 0
                 nanos = notFull.awaitNanos(nanos);
             }
+            // 队列没有满，直接新增到队列的尾部
             enqueue(new Node<E>(e));
+            // 新增计数赋值，注意这里 getAndIncrement 返回的是旧值
+            // 这里的 c 是比真实的 count 小 1 的
             c = count.getAndIncrement();
+            // 如果链表现在的大小 < 链表的容量，说明队列未满，可以尝试唤醒一个 put 的等待线程
             if (c + 1 < capacity)
                 notFull.signal();
         } finally {
+            // 释放锁
             putLock.unlock();
         }
+        // c == 0，代表队列里面有一个元素。此时会尝试唤醒一个take的等待线程
         if (c == 0)
             signalNotEmpty();
         return true;
@@ -520,7 +547,9 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         return c >= 0;
     }
 
-    // 阻塞拿数据
+    /**
+     * 阻塞拿数据
+     */
     public E take() throws InterruptedException {
         E x;
         // 默认负数，代表失败
@@ -540,15 +569,14 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             // c 比真实的 count 大1
             c = count.getAndDecrement();
 
-            //如果队列里面有值，从take的等待线程里面唤醒一个。
-            //意思是队列里面有值啦,唤醒之前被阻塞的线程
+            // 如果队列里面有值，从take的等待线程里面唤醒一个。意思是队列里面有值啦，唤醒之前被阻塞的线程
             if (c > 1)
                 notEmpty.signal();
         } finally {
             //释放锁
             takeLock.unlock();
         }
-        //如果队列空闲还剩下一个，尝试从put的等待线程中唤醒一个
+        // 如果队列空闲还剩下一个，尝试从put的等待线程中唤醒一个
         if (c == capacity)
             signalNotFull();
         return x;
@@ -602,7 +630,9 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         return x;
     }
 
-    // 查看并不删除元素，如果队列为空，返回 null
+    /**
+     * 查看并不删除元素，如果队列为空，返回 null
+     */
     public E peek() {
         // count 代表队列实际大小，队列为空，直接返回 null
         if (count.get() == 0)
