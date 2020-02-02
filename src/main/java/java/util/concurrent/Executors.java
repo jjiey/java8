@@ -412,6 +412,7 @@ public class Executors {
     public static <T> Callable<T> callable(Runnable task, T result) {
         if (task == null)
             throw new NullPointerException();
+        // Runnable 转 Callable 的转化工具类
         return new RunnableAdapter<T>(task, result);
     }
 
@@ -507,11 +508,12 @@ public class Executors {
     // Non-public classes supporting the public methods
 
     /**
+     * Runnable 转 Callable 的转化工具类
+     * 这是一个典型的适配模型。我们要把 Runnable 适配成 Callable，首先要实现 Callable 的接口，接着在 Callable 的 call 方法里面调用被适配对象（Runnable）的方法
+     *
      * A callable that runs given task and returns given result
      * 翻译：运行给定任务并返回给定结果的 可调用程序
      */
-    // RunnableAdapter 是转化 Runnable 成 Callable 的工具类
-    // 这里是一个典型的适配模型。我们要把 Runnable 适配成 Callable，首先要实现 Callable 的接口，接着在 Callable 的 call 方法里面调用被适配对象（Runnable）的方法
     static final class RunnableAdapter<T> implements Callable<T> {
         final Runnable task;
         final T result;

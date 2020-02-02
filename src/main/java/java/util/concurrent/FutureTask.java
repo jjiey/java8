@@ -37,6 +37,8 @@ package java.util.concurrent;
 import java.util.concurrent.locks.LockSupport;
 
 /**
+ * FutureTask 就统一了 Callable 和 Runnable
+ *
  * FutureTask可以当做是线程运行的具体任务
  * 可取消的异步计算
  * A cancellable asynchronous computation.  This class provides a base
@@ -94,41 +96,56 @@ public class FutureTask<V> implements RunnableFuture<V> {
      * NEW -> CANCELLED
      * NEW -> INTERRUPTING -> INTERRUPTED
      */
-    // 任务状态
     private volatile int state;
-    // 线程任务创建
+    /**
+     * 线程任务创建
+     */
     private static final int NEW          = 0;
-    // 任务执行中
+    /**
+     * 任务执行中
+     */
     private static final int COMPLETING   = 1;
-    // 任务执行结束
+    /**
+     * 任务执行结束
+     */
     private static final int NORMAL       = 2;
-    // 任务异常
+    /**
+     * 任务异常
+     */
     private static final int EXCEPTIONAL  = 3;
-    // 任务取消成功
+    /**
+     * 任务取消成功
+     */
     private static final int CANCELLED    = 4;
-    // 任务正在被打断中
+    /**
+     * 任务正在被打断中
+     */
     private static final int INTERRUPTING = 5;
-    // 任务被打断成功
+    /**
+     * 任务被打断成功
+     */
     private static final int INTERRUPTED  = 6;
 
-    /** The underlying callable; nulled out after running */
-    /* 底层的调用；运行后为空 */
-    // 组合了 Callable
+    /** The underlying callable; nulled out after running 底层的调用；运行后为空 */
+    // FutureTask 组合了 Callable
     private Callable<V> callable;
-    /** The result to return or exception to throw from get() */
-    /* 要返回的结果或要从get()抛出的异常 */
+
+    /** The result to return or exception to throw from get() 要返回的结果或从get()抛出的异常 */
     // 异步线程返回的结果，读写锁保证了其线程安全
     private Object outcome; // non-volatile, protected by state reads/writes
-    /** The thread running the callable; CASed during run() */
-    /* 运行可调用的线程；运行期间CASed */
+
+    /** The thread running the callable; CASed during run() 运行可调用的线程；运行期间CASed */
     // 当前任务所运行的线程
     private volatile Thread runner;
-    /** Treiber stack of waiting threads */
-    /* 等待线程的Treiber堆栈 */
+
+    /** Treiber stack of waiting threads 等待线程的Treiber堆栈 */
     // 记录调用 get 方法时被等待的线程
     private volatile WaitNode waiters;
 
     /**
+     * 任务执行完成，返回执行的结果
+     * 其实就是返回outcome的值
+     *
      * Returns result or throws exception for completed task.
      *
      * @param s completed state value
@@ -144,6 +161,8 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
+     * 使用 Callable 进行初始化
+     *
      * Creates a {@code FutureTask} that will, upon running, execute the
      * given {@code Callable}.
      * 翻译：创建一个FutureTask，它将在运行时执行给定的Callable。
@@ -151,7 +170,6 @@ public class FutureTask<V> implements RunnableFuture<V> {
      * @param  callable the callable task callable任务
      * @throws NullPointerException if the callable is null 如果callable为空则抛出NullPointerException
      */
-    // 使用 Callable 进行初始化
     public FutureTask(Callable<V> callable) {
         if (callable == null)
             throw new NullPointerException();
@@ -160,16 +178,17 @@ public class FutureTask<V> implements RunnableFuture<V> {
         this.state = NEW;       // ensure visibility of callable 确保callable的可见性
     }
 
-    // 使用 Runnable 初始化，并传入 result 作为返回结果。
-    // Runnable 是没有返回值的，所以 result 一般没有用，置为 null 就好了
+    /**
+     * 使用 Runnable 初始化，并传入 result 作为返回结果
+     * Runnable 是没有返回值的，所以 result 一般没有用，置为 null 就好了
+     * @param runnable
+     * @param result 返回结果
+     */
     public FutureTask(Runnable runnable, V result) {
         // Executors.callable 方法把 runnable 适配成 RunnableAdapter，RunnableAdapter 实现了 callable，所以也就是把 runnable 直接适配成了 callable。
         this.callable = Executors.callable(runnable, result);
         this.state = NEW;       // ensure visibility of callable 确保callable的可见性
     }
-
-
-
 
     public boolean isCancelled() {
         return state >= CANCELLED;
@@ -179,15 +198,18 @@ public class FutureTask<V> implements RunnableFuture<V> {
         return state != NEW;
     }
 
-    // 取消任务，如果正在运行，尝试去打断
+    /**
+     * 取消任务，如果正在运行，尝试去打断
+     * @param mayInterruptIfRunning true 表示 任务正在被打断中；false 表示 任务取消成功
+     * @return
+     */
     public boolean cancel(boolean mayInterruptIfRunning) {
-        // 任务状态不是创建 并且不能把 new 状态置为 取消，直接返回 false
-        // mayInterruptIfRunning ? 任务正在被打断中 : 任务取消成功
+        // 任务状态不是NEW 并且不能把 new 状态置为 取消，直接返回 false
         if (!(state == NEW &&
               UNSAFE.compareAndSwapInt(this, stateOffset, NEW,
                   mayInterruptIfRunning ? INTERRUPTING : CANCELLED)))
             return false;
-        // 进行取消操作，打断可能会抛出异常，选择 try finally 的结构
+        // 进行取消操作，打断可能会抛出异常，所以选择 try finally 的结构
         try {    // in case call to interrupt throws exception 在调用中断时抛出异常
             if (mayInterruptIfRunning) {
                 try {
@@ -214,7 +236,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
         // 如果任务刚创建或在执行中，等待执行成功
         if (s <= COMPLETING)
             s = awaitDone(false, 0L);
-        // 任务执行完成，直接返回值 outcome
+        // 任务执行完成，返回执行的结果
         return report(s);
     }
 
@@ -226,7 +248,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
         if (unit == null)
             throw new NullPointerException();
         int s = state;
-        // 如果任务状态为执行中，并且等待一定的时间后，状态仍然为执行中，直接抛出TimeoutException异常
+        // 如果任务状态为执行中，并且等待一定的时间后，状态仍然为执行中，直接抛出超时异常
         if (s <= COMPLETING &&
             (s = awaitDone(true, unit.toNanos(timeout))) <= COMPLETING)
             throw new TimeoutException();
@@ -248,7 +270,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
         boolean queued = false;
         // 无限循环
         for (;;) {
-            // 如果线程已经被打断了，删除，抛异常
+            // 如果线程已经被打断了，删除节点，抛异常
             if (Thread.interrupted()) {
                 removeWaiter(q);
                 throw new InterruptedException();
@@ -268,8 +290,8 @@ public class FutureTask<V> implements RunnableFuture<V> {
             // 如果第一次运行，新建 waitNode，当前线程就是 waitNode 的属性
             else if (q == null)
                 q = new WaitNode();
-                // 默认第一次都会执行这里，执行成功之后，queued 就为 true，就不会再执行了
-                // 把当前 waitNode 当做 waiters 链表的第一个
+            // 默认第一次都会执行这里，执行成功之后，queued 就为 true，就不会再执行了
+            // 把当前 waitNode 当做 waiters 链表的第一个
             else if (!queued)
                 queued = UNSAFE.compareAndSwapObject(this, waitersOffset,
                                                      q.next = waiters, q);
@@ -336,8 +358,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * run 方法可以直接被调用
-     * 也可以由线程池进行调用
+     * run 方法可以直接被调用，也可以由线程池进行调用
      * 如果需要开启子线程的话，只能走线程池，线程池会帮忙开启线程
      */
     public void run() {
@@ -481,8 +502,6 @@ public class FutureTask<V> implements RunnableFuture<V> {
 
         callable = null;        // to reduce footprint
     }
-
-
 
     /**
      * Tries to unlink a timed-out or interrupted wait node to avoid

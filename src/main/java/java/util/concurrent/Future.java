@@ -36,20 +36,20 @@
 package java.util.concurrent;
 
 /**
- * 代表着异步的计算，提供了计算是否完成的 check，等待完成，取回等多种方法
+ * 定义了异步计算的接口，提供了计算是否完成的 check、等待完成、取回等多种方法
  * A {@code Future} represents the result of an asynchronous
  * computation.  Methods are provided to check if the computation is
  * complete, to wait for its completion, and to retrieve the result of
  * the computation.
  * 翻译：Future表示一个异步计算的结果。它的方法可用于检查计算是否完成，等待计算的完成，并检索计算结果。
  *
- * 得到结果可以使用 get，会一直阻塞到结果计算完成。
+ * 如果想得到结果可以使用 get 方法，此方法(无参方法)会一直阻塞到异步任务计算完成。
  * The result can only be retrieved using method
  * {@code get} when the computation has completed, blocking if
  * necessary until it is ready.
  * 翻译：当计算完成时，才可以使用get方法检索结果，如果有必要，将进行阻塞，直到计算完成为止。
  *
- * 取消可以使用 cancel，一旦计算完成，就无法被取消了
+ * 取消可以使用 cancel 方法，但一旦任务计算完成，就无法被取消了
  * Cancellation is performed by the
  * {@code cancel} method.  Additional methods are provided to
  * determine if the task completed normally or was cancelled.
@@ -113,6 +113,11 @@ package java.util.concurrent;
 public interface Future<V> {
 
     /**
+     * 如果任务已经成功了，或已经取消了，是无法再取消的，会直接返回取消成功(true)
+     * 如果任务还没有开始进行时，发起取消，是可以取消成功的。
+     * 如果取消时，任务已经在运行了，mayInterruptIfRunning 为 true 的话，就可以打断运行中的线程
+     * mayInterruptIfRunning 为 false，表示不能打断直接返回
+     *
      * Attempts to cancel execution of this task.  This attempt will
      * fail if the task has already completed, has already been cancelled,
      * or could not be cancelled for some other reason.
@@ -139,24 +144,23 @@ public interface Future<V> {
      * typically because it has already completed normally;
      * {@code true} otherwise 如果任务不能被取消，典型的场景比如说任务已经正常完成了，会返回false；反之返回true
      */
-    // 如果任务已经成功了，或已经取消了，是无法再取消的，会直接返回取消成功(true)
-    // 如果任务还没有开始进行时，发起取消，是可以取消成功的。
-    // 如果取消时，任务已经在运行了，mayInterruptIfRunning 为 true 的话，就可以打断运行中的线程
-    // mayInterruptIfRunning 为 false，表示不能打断直接返回
     boolean cancel(boolean mayInterruptIfRunning);
 
     /**
+     * 返回线程是否已经被取消了，true 表示已经被取消了
+     * 线程如果已经运行结束了，isCancelled 和 isDone 返回的都是 true
+     *
      * Returns {@code true} if this task was cancelled before it completed
      * normally.
      * 翻译：如果任务被取消之前已经正常完成了会返回true。
      *
      * @return {@code true} if this task was cancelled before it completed
      */
-    // 返回线程是否已经被取消了，true 表示已经被取消了
-    // 线程如果已经运行结束了，isCancelled 和 isDone 返回的都是 true
     boolean isCancelled();
 
     /**
+     * 线程是否已经运行结束了
+     *
      * Returns {@code true} if this task completed.
      * 翻译：如果这个任务完成了会返回true。
      *
@@ -167,10 +171,13 @@ public interface Future<V> {
      *
      * @return {@code true} if this task completed
      */
-    // 线程是否已经运行结束了
     boolean isDone();
 
     /**
+     * 会等待结果返回
+     * 如果任务被取消了，抛 CancellationException 异常
+     * 如果等待过程中被打断了，抛 InterruptedException 异常
+     *
      * Waits if necessary for the computation to complete, and then
      * retrieves(取回) its result.
      * 翻译：如果需要，会等待计算的完成，然后取回计算结果
@@ -182,12 +189,11 @@ public interface Future<V> {
      * @throws InterruptedException if the current thread was interrupted
      * while waiting 如果当前线程在等待时被中断则抛出InterruptedException
      */
-    // 等待结果返回
-    // 如果任务呗取消了，抛 CancellationException 异常
-    // 如果等待过程中被打断了，抛 InterruptedException 异常
     V get() throws InterruptedException, ExecutionException;
 
     /**
+     * 带有超时时间的等待，如果超时时间外仍然没有响应，抛 TimeoutException 异常
+     *
      * Waits if necessary for at most the given time for the computation
      * to complete, and then retrieves its result, if available.
      * 翻译：如果需要，将最多等待给定的时间来完成计算，如果可用，然后取回结果。
@@ -202,7 +208,6 @@ public interface Future<V> {
      * while waiting 如果当前线程在等待时被中断则抛出InterruptedException
      * @throws TimeoutException if the wait timed out 如果等待超时则抛出TimeoutException
      */
-    // 等待，但是带有超时时间的，如果超时时间外仍然没有响应，抛 TimeoutException 异常
     V get(long timeout, TimeUnit unit)
         throws InterruptedException, ExecutionException, TimeoutException;
 }
