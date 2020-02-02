@@ -23,13 +23,12 @@ public class ComponentExecutor {
      * 如果 SpringBean 上有 AsyncComponent 注解，表示该 SpringBean 需要异步执行，就丢到线程池中去
      * @param content
      */
-    public static final void run(DomainAbilityBean domainAbility, FlowContent content) {
+    public static void run(DomainAbilityBean domainAbility, FlowContent content) {
         // 判断类上是否有 AsyncComponent 注解
         if (AnnotationUtils.isAnnotationPresent(AsyncComponent.class, AopUtils.getTargetClass(domainAbility))) {
             // 提交到线程池中
-            executor.submit(() -> {
-                domainAbility.invoke(content);
-            });
+//            executor.submit(() -> { domainAbility.invoke(content); });
+            executor.submit(new AsyncRunnable(() -> domainAbility.invoke(content)));
             return;
         }
         // 同步 SpringBean 直接执行。
