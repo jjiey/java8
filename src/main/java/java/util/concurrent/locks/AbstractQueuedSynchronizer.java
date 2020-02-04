@@ -1793,6 +1793,8 @@ public abstract class AbstractQueuedSynchronizer
      */
     final boolean apparentlyFirstQueuedIsExclusive() {
         Node h, s;
+        // 代码思路：队列里至少存在一个独占模式的节点，且节点线程不为空
+        // 头节点不为空 && 头节点的下一个节点不为空 && 头节点的下一个节点是SHARED && 头节点的下一个节点的线程不为空
         return (h = head) != null &&
             (s = h.next)  != null &&
             !s.isShared()         &&
@@ -1845,6 +1847,7 @@ public abstract class AbstractQueuedSynchronizer
      *         is at the head of the queue or the queue is empty
      * @since 1.7
      */
+    // hasQueuedPredecessors 翻译 有排队的前驱节点
     public final boolean hasQueuedPredecessors() {
         // The correctness of this depends on head being initialized
         // before tail and on head.next being accurate if the current
