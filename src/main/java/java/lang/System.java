@@ -492,11 +492,11 @@ public final class System {
      */
     /**
      * @param src     被拷贝的数组
-     * @param srcPos  从数组那里开始
+     * @param srcPos  从数组哪里开始
      * @param dest    目标数组
-     * @param destPos 从目的数组那里开始拷贝
+     * @param destPos 从目标数组哪个索引位置开始拷贝
      * @param length  拷贝的长度
-     *                是没有返回值的，通过 dest 的引用进行传值
+     * 此方法没有返回值，通过 dest 的引用进行传值
      */
     public static native void arraycopy(Object src, int srcPos,
                                         Object dest, int destPos,

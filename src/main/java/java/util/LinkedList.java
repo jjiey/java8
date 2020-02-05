@@ -28,6 +28,12 @@ package java.util;
 import java.util.function.Consumer;
 
 /**
+ * 适用于集合元素先入先出和先入后出的场景，在队列源码中被频繁使用
+ * 底层数据结构是一个双向链表
+ * 当链表中没有数据时，first 和 last 是同一个节点，前后指向都是 null；
+ * 因为是个双向链表，只要机器内存足够强大，是没有大小限制的。
+ * 但是size是int类型，说明最大值还是 Integer 的最大值
+ *
  * doubly-linked list implementation of the {@code List} and {@code Deque}
  * interfaces.  Implements all optional list operations, and permits all
  * elements (including {@code null}).
@@ -87,6 +93,8 @@ public class LinkedList<E>
     transient int size = 0;
 
     /**
+     * 双向链表的头节点，它的前一个节点是 null
+     *
      * Pointer to first node.
      * Invariant: (first == null && last == null) ||
      *            (first.prev == null && first.item != null)
@@ -94,6 +102,8 @@ public class LinkedList<E>
     transient Node<E> first;
 
     /**
+     * 双向链表的尾节点，它的后一个节点是 null
+     *
      * Pointer to last node.
      * Invariant: (first == null && last == null) ||
      *            (last.next == null && last.item != null)
@@ -119,40 +129,47 @@ public class LinkedList<E>
         addAll(c);
     }
 
-
-    // 从头部追加
+    /**
+     * 从头部追加节点
+     * @param e 追加的节点
+     */
     private void linkFirst(E e) {
-        //头节点赋值给临时变量
+        // 头节点赋值给临时变量
         final Node<E> f = first;
-        //新建节点，前一个节点指向null，e是新建节点的值，f 是新建节点的下一个节点
+        // 新建节点，前一个节点指向null，e是新建节点的值，f 是新建节点的下一个节点，f 目前值是头节点的值
         final Node<E> newNode = new Node<>(null, e, f);
-        //新建节点成为头节点
+        // 新建节点成为头节点
         first = newNode;
-        //头节点为空，就是链表唯恐，头尾节点是一个节点。
+        // 头节点为空，就是链表为空，头尾节点是一个节点
         if (f == null)
             last = newNode;
-        //上一个头节点的前一个节点就是当前节点
+        // 否则上一个头节点的前一个节点指向当前节点
         else
             f.prev = newNode;
+        // 大小和版本更改
         size++;
         modCount++;
     }
 
-    // 从尾部开始追加节点
+    /**
+     * 从尾部追加节点
+     * @param e 追加的节点
+     */
     void linkLast(E e) {
         // 把尾节点数据暂存
         final Node<E> l = last;
-        //新建新的节点，l 是前一个节点，e 是当前节点的值，后一个节点是 null
+        // 新建新的节点，初始化入参含义：
+        // l 是新节点的前一个节点，l 的当前值是尾节点值；e 表示当前新增节点；当前新增节点后一个节点是 null
         final Node<E> newNode = new Node<>(l, e, null);
-        //新建的节点放在尾部
+        // 新建的节点追加到尾部
         last = newNode;
-        //如果链表为空，头部和尾部是同一个节点，都是新建的节点
+        // 如果链表为空（l 是尾节点，尾节点为空，链表即空），头部和尾部是同一个节点，都是新建的节点
         if (l == null)
             first = newNode;
-        //否则把前尾节点的下一个节点，指向当前尾节点。
+        // 否则把前尾节点的下一个节点，指向当前尾节点
         else
             l.next = newNode;
-        //大小和版本更改
+        // 大小和版本更改
         size++;
         modCount++;
     }
@@ -173,24 +190,28 @@ public class LinkedList<E>
         modCount++;
     }
 
-    //从头删除节点 f 是链表头节点
+    /**
+     * 从头删除节点
+     * @param f 链表头节点
+     * @return 链表头节点的值
+     */
     private E unlinkFirst(Node<E> f) {
         // 拿出头节点的值，作为方法的返回值
         final E element = f.item;
         // 拿出头节点的下一个节点
         final Node<E> next = f.next;
-        //帮助 GC 回收头节点
+        // 帮助 GC 回收头节点
         f.item = null;
         f.next = null;
         // 头节点的下一个节点成为头节点
         first = next;
-        //如果 next 为空，表明链表为空
+        // 如果 next 为空，表明链表为空
         if (next == null)
             last = null;
-        //链表不为空，头节点的前一个节点指向 null
+        // 如果链表不为空，头节点的前一个节点指向 null
         else
             next.prev = null;
-        //修改链表大小和版本
+        // 修改链表大小和版本
         size--;
         modCount++;
         return element;
@@ -271,6 +292,8 @@ public class LinkedList<E>
     }
 
     /**
+     * 删除头部节点
+     *
      * Removes and returns the first element from this list.
      *
      * @return the first element from this list
@@ -297,6 +320,8 @@ public class LinkedList<E>
     }
 
     /**
+     * 从头部追加
+     *
      * Inserts the specified element at the beginning of this list.
      *
      * @param e the element to add
@@ -339,6 +364,8 @@ public class LinkedList<E>
     }
 
     /**
+     * 默认从尾部开始追加节点
+     *
      * Appends the specified element to the end of this list.
      *
      * <p>This method is equivalent to {@link #addLast}.
@@ -347,6 +374,7 @@ public class LinkedList<E>
      * @return {@code true} (as specified by {@link Collection#add})
      */
     public boolean add(E e) {
+        // 从尾部开始追加节点
         linkLast(e);
         return true;
     }
@@ -573,20 +601,23 @@ public class LinkedList<E>
     }
 
     /**
+     * 根据链表索引位置查询节点
+     * 并没有采用从头循环到尾的做法，而是采取了简单二分法
+     *
      * Returns the (non-null) Node at the specified element index.
      */
-    // 根据搜索因为查询节点
     Node<E> node(int index) {
-        // index 处于队列的前半部分，从头开始找
+        // 如果 index 处于队列的前半部分，从头开始找，size >> 1 是 size 除以 2 的意思
         if (index < (size >> 1)) {
             Node<E> x = first;
-            // 直到 for 循环到 index 的前一个 node
+            // 直到 for 循环到 index 的前一个 node 停止
             for (int i = 0; i < index; i++)
                 x = x.next;
             return x;
-        } else {// index 处于队列的后半部分，从尾开始找
+        // 如果 index 处于队列的后半部分，从尾开始找
+        } else {
             Node<E> x = last;
-            // 直到 for 循环到 index 的后一个 node
+            // 直到 for 循环到 index 的后一个 node 停止
             for (int i = size - 1; i > index; i--)
                 x = x.prev;
             return x;
@@ -857,6 +888,8 @@ public class LinkedList<E>
     }
 
     /**
+     * 因为 LinkedList 要实现双向的迭代访问，所以不能使用 Iterator 接口，因为 Iterator 只支持从头到尾的访问。Java 新增了一个迭代接口，叫做：ListIterator，这个接口提供了向前和向后的迭代方法
+     *
      * Returns a list-iterator of the elements in this list (in proper
      * sequence), starting at the specified position in the list.
      * Obeys the general contract of {@code List.listIterator(int)}.<p>
@@ -882,13 +915,19 @@ public class LinkedList<E>
         return new ListItr(index);
     }
 
-    // 双向迭代器
+    /**
+     * 双向迭代器
+     * 从尾到头迭代方法：hasPrevious、previous、previousIndex
+     * 从头到尾迭代方法：hasNext、next、nextIndex
+     */
     private class ListItr implements ListIterator<E> {
-        private Node<E> lastReturned;//上一次 next 或者 previos 的节点
-        private Node<E> next;//下一个节点
-        //下一个节点的位置，从头迭代到尾，位置递增，从尾迭代到头，位置递减。
+        // 上一次执行 next() 或者 previos() 方法时的节点位置
+        private Node<E> lastReturned;
+        // 下一个节点
+        private Node<E> next;
+        // 下一个节点的位置，从头迭代到尾，位置递增，从尾迭代到头，位置递减。
         private int nextIndex;
-        //expectedModCount：期望版本号；modCount：目前最新版本号
+        // expectedModCount：期望版本号；modCount：目前最新版本号
         private int expectedModCount = modCount;
 
         ListItr(int index) {
@@ -897,18 +936,26 @@ public class LinkedList<E>
             nextIndex = index;
         }
 
-        // 判断还有没有下一个元素
+        /**
+         * 从头到尾迭代：判断还有没有后一个节点元素
+         */
         public boolean hasNext() {
-            return nextIndex < size;//下一个节点的索引小于链表的大小，就有
+            // 下一个节点的索引小于链表的大小，就有下一个元素
+            return nextIndex < size;
         }
 
-        // 取下一个元素
+        /**
+         * 从头到尾迭代：取下一个元素
+         * @return 下一个元素
+         */
         public E next() {
-            //检查期望版本号有无发生变化
+            // 检查期望版本号是否发生变化
             checkForComodification();
-            if (!hasNext())//再次检查
+            // 再次检查
+            if (!hasNext())
                 throw new NoSuchElementException();
-            // next 是当前节点
+            // next 是当前节点，在上一次执行 next() 方法时被赋值的
+            // 第一次执行时，是在初始化迭代器的时候，next 被赋值的
             lastReturned = next;
             // next 是下一个节点了，为下次迭代做准备
             next = next.next;
@@ -916,17 +963,25 @@ public class LinkedList<E>
             return lastReturned.item;
         }
 
-        // 如果上次节点索引位置大于 0，就还有节点可以迭代
+        /**
+         * 从尾到头迭代：判断还有没有前一个节点元素
+         */
         public boolean hasPrevious() {
+            // 如果上次节点索引位置大于 0，就还有节点可以迭代
             return nextIndex > 0;
         }
-        // 取前一个节点
+
+        /**
+         * 从尾到头迭代：取前一个节点
+         */
         public E previous() {
+            // 检查期望版本号是否发生变化
             checkForComodification();
+            // 再次检查
             if (!hasPrevious())
                 throw new NoSuchElementException();
-            // next 为空场景：说明是第一次迭代，取尾节点(last)
-            // next 不为空场景：说明已经发生过迭代了，直接取前一个节点即可(next.prev)
+            // next == null 场景：1:说明是第一次迭代，取尾节点(last)；2:上一次操作把尾节点删除掉了
+            // next != null 场景：说明已经发生过迭代了，直接取前一个节点即可(next.prev)
             lastReturned = next = (next == null) ? last : next.prev;
             // 索引位置变化
             nextIndex--;
@@ -941,18 +996,22 @@ public class LinkedList<E>
             return nextIndex - 1;
         }
 
+        /**
+         * 迭代器删除
+         */
         public void remove() {
+            // 检查期望版本号是否发生变化
             checkForComodification();
-            // lastReturned 为空，说明没有执行 next 或者 previos，直接报错
-            // lastReturned = next() 方法执行的结果
+            // lastReturned 是本次迭代需要删除的值，分以下空和非空两种情况：
+            // lastReturned == null 说明调用者没有主动执行过 next() 或者 previos()，直接报错
+            // lastReturned != null 说明是在上次执行 next() 或者 previos()方法时赋的值
             if (lastReturned == null)
                 throw new IllegalStateException();
             Node<E> lastNext = lastReturned.next;
-            //删除当前节点
+            // 删除当前节点
             unlink(lastReturned);
-            // 从尾到头递归顺序，并且是第一次迭代，并且要删除最后一个元素的情况下
-            // 这种情况下，previous 方法里面设置了 lastReturned = next = last。
-            // 我们必须把 next 设置成 null，这样在下次递归时，previous 方法才会让队尾最后一个节点赋值给 next
+            // next == lastReturned 的场景分析：从尾到头递归顺序，并且是第一次迭代，并且要删除最后一个元素的情况下
+            // 这种情况下，previous() 方法里面设置了 lastReturned = next = last，所以 next 和 lastReturned会相等
             if (next == lastReturned)
                 next = lastNext;
             else
@@ -996,12 +1055,18 @@ public class LinkedList<E>
         }
     }
 
+    /**
+     * 链表元素
+     */
     private static class Node<E> {
-        E item;// 节点值
-        Node<E> next; // 指向的下一个节点
-        Node<E> prev; // 指向的前一个节点
+        // 节点值
+        E item;
+        // 指向的下一个节点
+        Node<E> next;
+        // 指向的前一个节点
+        Node<E> prev;
 
-        // 初始化参数顺序分别是：前一个节点、本身、后一个节点
+        // 初始化参数顺序分别是：前一个节点、本身节点值、后一个节点
         Node(Node<E> prev, E element, Node<E> next) {
             this.item = element;
             this.next = next;

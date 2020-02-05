@@ -248,35 +248,55 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * avoid aliasing errors amid all of the twisty pointer operations.
      */
 
-    //初始容量
+    /**
+     * 初始容量
+     * 16
+     */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
-    //最大容量
+    /**
+     * 最大容量
+     */
     static final int MAXIMUM_CAPACITY = 1 << 30;
-   //负载因子默认值
+    /**
+     * 负载因子默认值
+     * 是均衡了时间和空间损耗算出来的值，较高的值会减少空间开销（扩容减少，数组大小增长速度变慢），但增加了查找成本（hash 冲突增加，链表长度变长）
+     * 不扩容的条件：数组容量 > 需要的数组大小 / load factor
+     */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
-    //bin(桶)容量大于等于8时，链表转化成红黑树
+    /**
+     * bin(桶)上的链表长度 >= 8时，链表转化成红黑树
+     */
     static final int TREEIFY_THRESHOLD = 8;
-
-    //bin(桶)容量小于等于6时，红黑树转化成链表
+    /**
+     * bin(桶)上的红黑树大小 <= 6时，红黑树转化成链表
+     */
     static final int UNTREEIFY_THRESHOLD = 6;
-
-   //容量最小64时才会转会成红黑树
+    /**
+     * 当数组容量 > 64 时，链表才会转化成红黑树
+     */
     static final int MIN_TREEIFY_CAPACITY = 64;
-
-    //用于fail-fast的，记录HashMap结构发生变化(数量变化或rehash)的数目
+    /**
+     * 记录迭代过程中 HashMap 结构是否发生变化，如果有变化，迭代时会 fail-fast
+     */
     transient int modCount;
-
-    //HashMap 的实际大小，可能不准(因为当你拿到这个值的时候，可能又发生了变化)
+    /**
+     * HashMap 的实际大小，可能不准(因为当你拿到这个值的时候，可能又发生了变化)
+     */
     transient int size;
-
-    // 扩容的门槛，如果初始化时，给定数组大小的话，通过tableSizeFor 方法计算，永远接近于 2 的幂次方
-    // 如果是通过 resize 方法进行扩容后，大小 = 数组容量 * 0.75
+    /**
+     * 扩容的门槛，有两种情况：
+     * 1.初始化时，如果给定数组大小，则通过 tableSizeFor 方法计算，数组大小永远接近于 2 的幂次方，比如给定初始化大小 19，实际上初始化大小为 32，为 2 的 5 次方
+     * 2.通过 resize 方法进行扩容，大小 = 数组容量 * 0.75
+     */
     int threshold;
-
-    //存放数据的数组
+    /**
+     * 存放数据的数组
+     */
     transient Node<K,V>[] table;
 
-    //bin node 节点
+    /**
+     * 链表的节点
+     */
     static class Node<K,V> implements Map.Entry<K,V> {//Map.Entry是个接口
         final int hash;//当前node的hash值
         final K key;
@@ -318,7 +338,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
     }
 
-    //Tree bins 红黑树
+    /**
+     * 红黑树的节点
+     */
     static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
         TreeNode<K,V> parent;  // red-black tree links 红黑树父节点
         TreeNode<K,V> left;//左节点
@@ -1212,6 +1234,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
+     * 新增
+     *
      * Associates the specified value with the specified key in this map.
      * If the map previously contained a mapping for the key, the old
      * value is replaced.
@@ -1230,10 +1254,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * Implements Map.put and related methods
      *
-     * @param hash hash for key
+     * @param hash hash for key 通过 hash 算法计算出来的值
      * @param key the key
      * @param value the value to put
-     * @param onlyIfAbsent if true, don't change existing value
+     * @param onlyIfAbsent if true, don't change existing value 如果是 false 表示如果 key 已经存在了，会用新值覆盖原来的值，默认为 false
      * @param evict if false, the table is in creation mode.
      * @return previous value, or null if none
      */
@@ -1249,59 +1273,65 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     //9:如果数组的实际使用大小大于等于扩容的门槛，直接扩容
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
+        // n 表示数组的长度；i 为数组索引下标；p 为 i 位置的 Node 值
         Node<K,V>[] tab; Node<K,V> p; int n, i;
-        //如果数组为空，初始化
+        // 如果数组为空，使用 resize 方法初始化
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
-        // hashCode的算法先右移16 在并上数组大小-1
+        // hashCode的算法先右移16 再并上 数组大小 - 1
         // 如果当前索引位置是空的，直接生成新的节点在当前索引位置上
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
-        // 如果hash冲突，当前索引上有值
+        // 如果当前索引位置有值，解决 hash 冲突
         else {
+            // e 为当前节点的临时变量
             Node<K,V> e; K k;
-            // 如果key equals都相等，那么当前节点就是我们要新增的
+            // 如果 key 的 hash 和 值 都相等，直接把当前下标位置的 Node 值赋值给临时变量
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;
             // 如果是红黑树，使用红黑树的方式新增
             else if (p instanceof TreeNode)
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
-            // 是个链表
+            // 如果是链表，把新节点放到链表的尾端
             else {
+                // 自旋
                 for (int binCount = 0; ; ++binCount) {
-                    //如果是最后一个，还找不到和新增的元素相等的，直接新增
-                    //节点是新增到链表最后的
+                    // e = p.next 表示从头开始，遍历链表
+                    // p.next == null 表明 p 是链表的尾节点
+                    // 如果一直到链表的尾节点，还没找到和新增的元素相等的，直接把节点新增到链表最后
                     if ((e = p.next) == null) {
-                        //p.next是新增的节点，但是e仍然是null
-                        //e和p.next都是持有对null的引用,即使p.next后来赋予了值
-                        // 只是改变了p.next指向的引用，和e没有关系
+                        // p.next是新增的节点，但是e仍然是null；e和p.next都是持有对null的引用,即使p.next后来赋予了值，只是改变了p.next指向的引用，和e没有关系
+                        // 把新节点放到链表的尾部
                         p.next = newNode(hash, key, value, null);
-                        //新增时，链表的长度大于等于8时，链表转红黑树
+                        // 当链表的长度大于等于 8 时，链表转红黑树
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);
                         break;
                     }
-                    //链表中有元素和新增的元素相等，结束循环
+                    // 链表遍历过程中，发现有元素和新增的元素相等，结束循环
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
-                    //更改循环的当前元素
+                    // 更改循环的当前元素，使 p 在遍历过程中，一直往后移动
                     p = e;
                 }
             }
-            //说明新增的元素table中原来就有
+            // 到这里说明新节点的新增位置已经找到了
             if (e != null) {
                 V oldValue = e.value;
+                // 当 onlyIfAbsent 为 false 时，才会覆盖值
                 if (!onlyIfAbsent || oldValue == null)
                     e.value = value;
                 // 当前节点移动到队尾
                 afterNodeAccess(e);
+                // 返回老值
                 return oldValue;
             }
         }
+        // 记录 HashMap 的数据结构发生了变化
         ++modCount;
-        //如果kv的实际大小大于扩容的门槛，开始扩容
+        // 如果 HashMap 的实际大小 > 扩容的门槛，开始扩容
         if (++size > threshold)
             resize();
         // 删除不经常使用的元素

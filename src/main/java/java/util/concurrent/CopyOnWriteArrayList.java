@@ -114,7 +114,7 @@ public class CopyOnWriteArrayList<E>
     final transient ReentrantLock lock = new ReentrantLock();
 
     /** The array, accessed only via getArray/setArray. */
-    // volatile 关键字修饰，可见的
+    // volatile 关键字修饰，可见的，意思是一旦数组被修改，其它线程立马能够感知到
     // array 只开放出 get set
     private transient volatile Object[] array;
 
@@ -201,16 +201,12 @@ public class CopyOnWriteArrayList<E>
     /**
      * static version of indexOf, to allow repeated calls without
      * needing to re-acquire array each time.
-     * @param o element to search for
-     * @param elements the array
-     * @param index first index to search
-     * @param fence one past last index to search
+     * @param o element to search for 我们需要搜索的元素
+     * @param elements the array 我们搜索的目标数组
+     * @param index first index to search 搜索的开始位置
+     * @param fence one past last index to search 搜索的结束位置
      * @return index of element, or -1 if absent
      */
-    // o：我们需要搜索的元素
-    // elements：我们搜索的目标数组
-    // index：搜索的开始位置
-    // fence：搜索的结束位置
     private static int indexOf(Object o, Object[] elements,
                                int index, int fence) {
         // 支持对 null 的搜索
@@ -219,8 +215,7 @@ public class CopyOnWriteArrayList<E>
                 if (elements[i] == null)
                     return i;
         } else {
-            // 通过 equals 方法来判断元素是否相等
-            // 如果相等，返回元素的下标位置
+            // 通过 equals 方法来判断元素是否相等；如果相等，返回元素的下标位置
             for (int i = index; i < fence; i++)
                 if (o.equals(elements[i]))
                     return i;
@@ -453,68 +448,76 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
+     * 添加元素到数组尾部
+     * 分四步走：
+     * 1.加锁
+     * 2.从原数组中拷贝出新数组
+     * 3.在新数组上进行操作，并把新数组赋值给数组容器
+     * 4.解锁
+     *
      * Appends the specified element to the end of this list.
      *
      * @param e element to be appended to this list
      * @return {@code true} (as specified by {@link Collection#add})
      */
-
-    // 添加元素到数组尾部
     public boolean add(E e) {
         final ReentrantLock lock = this.lock;
-        //加锁
+        // 加锁
         lock.lock();
         try {
             // 得到所有的原数组
             Object[] elements = getArray();
             int len = elements.length;
-            //拷贝到新数组里面，新数组的长度是 + 1 的
+            // 拷贝到新数组里面，新数组的长度是 + 1 的，因为新增会多一个元素
             Object[] newElements = Arrays.copyOf(elements, len + 1);
-            //在新数组中进行赋值，新元素直接放在数组的尾部
+            // 在新数组中进行赋值，新元素直接放在数组的尾部
             newElements[len] = e;
-            //替换原来的数组
+            // 替换掉原来的数组
             setArray(newElements);
             return true;
         } finally {
+            // finally 里面释放锁，保证即使 try 发生了异常，仍然能够释放锁
             lock.unlock();
         }
     }
 
     /**
+     * 添加元素到指定位置
+     *
      * Inserts the specified element at the specified position in this
      * list. Shifts the element currently at that position (if any) and
      * any subsequent elements to the right (adds one to their indices).
      *
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
-
-    // 添加元素到指定位置
     public void add(int index, E element) {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
             Object[] elements = getArray();
+            // len：数组的长度
             int len = elements.length;
             // 给定索引位置和数组大小比较
             if (index > len || index < 0)
                 throw new IndexOutOfBoundsException("Index: "+index+
                                                     ", Size: "+len);
             Object[] newElements;
+            // index：插入的位置
             int numMoved = len - index;
-            // 如果要插入的位置正好等于数组的末尾，直接拷贝数组即可
+            // 如果要插入的位置 == 数组的末尾，直接拷贝数组即可
             if (numMoved == 0)
                 newElements = Arrays.copyOf(elements, len + 1);
             else {
-            // 如果要插入的位置在数组的中间，就需要拷贝 2 次
-            // 第一次从 0 拷贝到 index。
-            // 第二次从 index+1 拷贝到末尾。
+            // 如果要插入的位置在数组的中间，就需要拷贝 2 次：
+            // 1.从 0 拷贝到 index；2.从 index+1 拷贝到末尾
                 newElements = new Object[len + 1];
                 System.arraycopy(elements, 0, newElements, 0, index);
                 System.arraycopy(elements, index, newElements, index + 1,
                                  numMoved);
             }
-            // index 索引位置的值是空的，直接赋值即可。
+            // index 索引位置的值是空的，直接赋值即可
             newElements[index] = element;
+            // 把新数组的值赋值给数组的容器中
             setArray(newElements);
         } finally {
             lock.unlock();
@@ -522,16 +525,17 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
+     * 删除某个索引位置的数据
+     *
      * Removes the element at the specified position in this list.
      * Shifts any subsequent elements to the left (subtracts one from their
      * indices).  Returns the element that was removed from the list.
      *
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
-
-    // 删除某个索引位置的数据
     public E remove(int index) {
         final ReentrantLock lock = this.lock;
+        // 加锁
         lock.lock();
         try {
             Object[] elements = getArray();
@@ -543,10 +547,10 @@ public class CopyOnWriteArrayList<E>
             if (numMoved == 0)
                 setArray(Arrays.copyOf(elements, len - 1));
             else {
-                // 如果删除的数据在数组的中间，分三步步拷贝
-                // 设置新数组的长度减一
-                // 从 0 拷贝到数组新位置
-                // 从新位置拷贝到数组尾部
+                // 如果删除的数据在数组的中间，分三步走：
+                // 1.设置新数组的长度减一，因为是减少一个元素
+                // 2.从 0 拷贝到数组新位置
+                // 3.从新位置拷贝到数组尾部
                 Object[] newElements = new Object[len - 1];
                 System.arraycopy(elements, 0, newElements, 0, index);
                 System.arraycopy(elements, index + 1, newElements, index,
@@ -714,6 +718,9 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
+     * 批量删除包含在 c 中的元素
+     * 启发：在需要删除多个元素的时候，最好都使用这种批量删除的思想，而不是采用在 for 循环中使用单个删除的方法，单个删除的话，在每次删除的时候都会进行一次数组拷贝(删除最后一个元素时不会拷贝)，很消耗性能，也耗时，会导致加锁时间太长，并发大的情况下，会造成大量请求在等待锁，这也会占用一定的内存
+     *
      * Removes from this list all of its elements that are contained in
      * the specified collection. This is a particularly expensive operation
      * in this class because of the need for an internal temporary array.
@@ -729,7 +736,6 @@ public class CopyOnWriteArrayList<E>
      *         or if the specified collection is null
      * @see #remove(Object)
      */
-    // 批量删除
     public boolean removeAll(Collection<?> c) {
         if (c == null) throw new NullPointerException();
         final ReentrantLock lock = this.lock;
@@ -737,12 +743,13 @@ public class CopyOnWriteArrayList<E>
         try {
             Object[] elements = getArray();
             int len = elements.length;
-            // 说明数组有值
+            // len != 0 说明数组有值，数组无值直接返回 false
             if (len != 0) {
-                // newlen 表示新数组的索引位置
+                // newlen 表示新数组的索引位置，新数组中的元素不包含在 c 中
                 int newlen = 0;
+                // 临时数组，存放不需要删除的数据
                 Object[] temp = new Object[len];
-                // 循环，把不包含在 c 里面的元素，放到新数组中
+                // 循环原数组，把不包含在 c 里面的元素，放到新数组中
                 for (int i = 0; i < len; ++i) {
                     Object element = elements[i];
                     // 不包含在 c 中的元素，从 0 开始放到新数组中
@@ -1182,6 +1189,7 @@ public class CopyOnWriteArrayList<E>
     }
 
     public Iterator<E> iterator() {
+        // 参数 getArray()，迭代是直接持有原有数组的引用
         return new COWIterator<E>(getArray(), 0);
     }
 

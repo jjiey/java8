@@ -30,6 +30,7 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 /**
+ * 允许 add null 值，会自动扩容；
  * Resizable-array implementation of the <tt>List</tt> interface.  Implements
  * all optional list operations, and permits all elements, including
  * <tt>null</tt>.  In addition to implementing the <tt>List</tt> interface,
@@ -37,6 +38,7 @@ import java.util.function.UnaryOperator;
  * used internally to store the list.  (This class is roughly equivalent to
  * <tt>Vector</tt>, except that it is unsynchronized.)
  *
+ * size、isEmpty、get、set、add 等方法时间复杂度都是 O (1)；
  * <p>The <tt>size</tt>, <tt>isEmpty</tt>, <tt>get</tt>, <tt>set</tt>,
  * <tt>iterator</tt>, and <tt>listIterator</tt> operations run in constant
  * time.  The <tt>add</tt> operation runs in <i>amortized constant time</i>,
@@ -64,12 +66,14 @@ import java.util.function.UnaryOperator;
  * a structural modification.)  This is typically accomplished by
  * synchronizing on some object that naturally encapsulates the list.
  *
+ * 是非线程安全的，多线程情况下，推荐使用线程安全类：Collections#synchronizedList；
  * If no such object exists, the list should be "wrapped" using the
  * {@link Collections#synchronizedList Collections.synchronizedList}
  * method.  This is best done at creation time, to prevent accidental
  * unsynchronized access to the list:<pre>
  *   List list = Collections.synchronizedList(new ArrayList(...));</pre>
  *
+ * 增强 for 循环，或者使用迭代器迭代过程中，如果数组大小被改变，会快速失败，抛出异常。
  * <p><a name="fail-fast">
  * The iterators returned by this class's {@link #iterator() iterator} and
  * {@link #listIterator(int) listIterator} methods are <em>fail-fast</em>:</a>
@@ -108,19 +112,21 @@ public class ArrayList<E> extends AbstractList<E>
 {
   private static final long serialVersionUID = 8683452581122892189L;
 
-  //默认数组大小10
+  /**
+   * 数组初始大小默认10
+   */
   private static final int DEFAULT_CAPACITY = 10;
-
-  //数组存放的容器
+  // 数组存放的容器
   private static final Object[] EMPTY_ELEMENTDATA = {};
-
-  //数组使用的大小
+  /**
+   * 当前数组大小
+   * 没有使用 volatile 修饰，非线程安全
+   */
   private int size;
 
-
-
-
   /**
+   * 无参构造器将此空数组赋值给 elementData 变量
+   *
    * Shared empty array instance used for default sized empty instances. We
    * distinguish this from EMPTY_ELEMENTDATA to know how much to inflate when
    * first element is added.
@@ -134,8 +140,6 @@ public class ArrayList<E> extends AbstractList<E>
    * will be expanded to DEFAULT_CAPACITY when the first element is added.
    */
   transient  Object[] elementData; // non-private to simplify nested class access
-
-
 
   /**
    * Constructs an empty list with the specified initial capacity.
@@ -155,13 +159,17 @@ public class ArrayList<E> extends AbstractList<E>
     }
   }
 
-
-  //  无参数构造器，默认是空数组
+  /**
+   * 无参数构造器，默认是空数组
+   * 并不是常说的 10，10 是在第一次 add 的时候扩容的数组值
+   */
   public ArrayList() {
     this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
   }
 
   /**
+   * 指定初始数据初始化
+   *
    * Constructs a list containing the elements of the specified
    * collection, in the order they are returned by the collection's
    * iterator.
@@ -169,14 +177,13 @@ public class ArrayList<E> extends AbstractList<E>
    * @param c the collection whose elements are to be placed into this list
    * @throws NullPointerException if the specified collection is null
    */
-  //指定初始数据初始化
   public ArrayList(Collection<? extends E> c) {
-    //elementData 是保存数组的容器，默认为 null
+    // elementData 是保存数组的容器，默认为 null
     elementData = c.toArray();
-    //如果给定的集合（c）数据有值，则进行拷贝赋值操作
+    // 如果给定的集合（c）数据有值，则进行拷贝赋值操作
     if ((size = elementData.length) != 0) {
       // c.toArray might (incorrectly) not return Object[] (see 6260652)
-      //如果集合元素类型不是 Object 类型，才开始拷贝，否则不执行
+      // 如果集合元素类型不是 Object 类型，会转成 Object
       if (elementData.getClass() != Object[].class) {
         elementData = Arrays.copyOf(elementData, size, Object[].class);
       }
@@ -433,42 +440,56 @@ public class ArrayList<E> extends AbstractList<E>
     size++;
   }
 
-
-
+  /**
+   * 新增
+   */
   public boolean add(E e) {
-    //确保数组大小足够，不够需要扩容
+    // 确保数组大小足够，不够执行扩容，size 为当前数组的大小
     ensureCapacityInternal(size + 1);  // Increments modCount!!
-    //直接赋值，线程不安全的
+    // 直接赋值，线程不安全的
     elementData[size++] = e;
     return true;
   }
+
+  /**
+   * 确保数组大小足够，不够执行扩容
+   */
   private void ensureCapacityInternal(int minCapacity) {
-    //如果是空数组，就从最小容量和默认容量10之间取最大值
+    // 如果是空数组，就从最小容量和默认容量10之间取最大值
     if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
       minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
     }
-    //确保容积足够
+    // 确保容积足够
     ensureExplicitCapacity(minCapacity);
   }
+
+  /**
+   * 确保容积足够
+   */
   private void ensureExplicitCapacity(int minCapacity) {
-    //记录数组被修改
+    // 记录数组被修改
     modCount++;
-    // 如果我们希望的最小容量大于目前数组的长度，那么就扩容
+    // 如果期望的最小容量 > 目前数组的长度，那么就扩容
     if (minCapacity - elementData.length > 0)
       grow(minCapacity);
   }
-  //老的数组大小2倍，最后把现有数据拷贝到新的数组里面去
+
+  /**
+   * 扩容，并把现有数据拷贝到新的数组里面去
+   * 老的数组大小2倍，最后把现有数据拷贝到新的数组里面去
+   */
   private void grow(int minCapacity) {
     // overflow-conscious code
     int oldCapacity = elementData.length;
     // oldCapacity >> 1 是把 oldCapacity / 2 的意思
+    // 扩容策略：原数组的1.5倍
     int newCapacity = oldCapacity + (oldCapacity >> 1);
 
-    // 如果扩容后的值 < 我们的期望值，扩容后的值就等于我们的期望值
+    // 如果扩容后的值 < 期望值，扩容后的值就等于期望值
     if (newCapacity - minCapacity < 0)
       newCapacity = minCapacity;
 
-    // 如果扩容后的值 > jvm 所能分配的数组的最大值，那么就去 Integer 的最大值
+    // 如果扩容后的值 > jvm 所能分配的数组的最大值，那么就用 Integer 的最大值
     if (newCapacity - MAX_ARRAY_SIZE > 0)
       newCapacity = hugeCapacity(minCapacity);
     // minCapacity is usually close to size, so this is a win:
@@ -502,6 +523,8 @@ public class ArrayList<E> extends AbstractList<E>
   }
 
   /**
+   * 根据值去删除
+   *
    * Removes the first occurrence of the specified element from this list,
    * if it is present.  If the list does not contain the element, it is
    * unchanged.  More formally, removes the element with the lowest index
@@ -514,10 +537,8 @@ public class ArrayList<E> extends AbstractList<E>
    * @param o element to be removed from this list, if present
    * @return <tt>true</tt> if this list contained the specified element
    */
-
-  // 根据值去删除
   public boolean remove(Object o) {
-    // 如果值是空的，找到第一个值是空的删除
+    // 如果要删除的值是 null，找到第一个值是 null 的删除
     if (o == null) {
       for (int index = 0; index < size; index++)
         if (elementData[index] == null) {
@@ -525,9 +546,9 @@ public class ArrayList<E> extends AbstractList<E>
           return true;
         }
     } else {
-      // 值不为空，找到第一个和入参相等的删除
+      // 如果要删除的值不为 null，找到第一个和要删除的值相等的删除
       for (int index = 0; index < size; index++)
-        // 这里是根据  equals 来判断值相等的
+        // 这里是根据  equals 来判断值相等的，相等后再根据索引位置进行删除
         if (o.equals(elementData[index])) {
           fastRemove(index);
           return true;
@@ -542,16 +563,21 @@ public class ArrayList<E> extends AbstractList<E>
    */
 
 
+  /**
+   * 根据索引位置进行元素的删除
+   * @param index 索引位置
+   */
   private void fastRemove(int index) {
     // 记录数组的结构要发生变动了
     modCount++;
+    // numMoved 表示删除 index 位置的元素后，需要从 index 后移动多少个元素到前面去
     // 减 1 的原因，是因为 size 从 1 开始算起，index 从 0开始算起
-    // numMoved 删除 index 位置的元素后，需要从 index 后移动多少个元素到前面去
     int numMoved = size - index - 1;
     if (numMoved > 0)
-      // 从 index +1 位置开始被拷贝，拷贝的起始位置是 index
+      // 把数组后面的元素往前移动
+      // 从 index +1 位置开始被拷贝，拷贝的起始位置是 index，长度是 numMoved
       System.arraycopy(elementData, index+1, elementData, index, numMoved);
-    //清楚数组最后一个位置
+    // 数组最后一个位置赋值 null，帮助 GC
     elementData[--size] = null; // clear to let GC do its work
   }
 
@@ -681,6 +707,8 @@ public class ArrayList<E> extends AbstractList<E>
   }
 
   /**
+   * 批量删除包含在 c 中的元素
+   *
    * Removes from this list all of its elements that are contained in the
    * specified collection.
    *
@@ -721,10 +749,13 @@ public class ArrayList<E> extends AbstractList<E>
     return batchRemove(c, true);
   }
 
-  // 批量删除，removeAll 方法 complement 参数传递的是 false
+  /**
+   * 批量删除包含在 c 中的元素
+   * removeAll 方法 complement 参数传递的是 false
+   */
   private boolean batchRemove(Collection<?> c, boolean complement) {
     final Object[] elementData = this.elementData;
-    // r 表示当前循环的位置、w 表示之前的数据，都不是要删除的数据，w 之后都是需要删除的数据
+    // r 表示当前循环的位置；w 表示之前的数据，都不是要删除的数据，w 之后都是需要删除的数据
     int r = 0, w = 0;
     boolean modified = false;
     try {
@@ -733,8 +764,7 @@ public class ArrayList<E> extends AbstractList<E>
         if (c.contains(elementData[r]) == complement)
           elementData[w++] = elementData[r];
     } finally {
-      // r 和 size 不等，说明在 try 过程中发生了异常，在 r 处断开
-      // 把 r 之后的数组移动到 w 之后
+      // r 和 size 不等，说明在 try 过程中发生了异常，在 r 处断开；把 r 之后的数组移动到 w 之后
       if (r != size) {
         System.arraycopy(elementData, r,
                          elementData, w,
@@ -838,6 +868,8 @@ public class ArrayList<E> extends AbstractList<E>
   }
 
   /**
+   * 迭代器
+   *
    * Returns an iterator over the elements in this list in proper sequence.
    *
    * <p>The returned iterator is <a href="#fail-fast"><i>fail-fast</i></a>.
@@ -849,51 +881,75 @@ public class ArrayList<E> extends AbstractList<E>
   }
 
   /**
+   * 迭代器 实现 Iterator 接口
+   *
    * An optimized version of AbstractList.Itr
    */
-  // 实现 Iterator 接口
   private class Itr implements Iterator<E> {
-    // 迭代过程中，下一个元素的位置，从 0 开始，用来控制拿下一个元素
+    /**
+     * 迭代过程中，下一个元素的位置，默认从 0 开始，用来控制拿下一个元素
+     */
     int cursor;       // index of next element to return
-    // 新增时表示上一次迭代过程中，索引的位置，删除成功时为 -1
+    /**
+     * 新增场景：表示上一次迭代过程中，索引的位置，删除场景：为 -1
+     */
     int lastRet = -1; // index of last element returned; -1 if no such
-    // 迭代过程中期望数组修改版本号
+    /**
+     * 迭代过程中，期望的版本号
+     * modCount 表示数组实际的版本号
+     */
     int expectedModCount = modCount;
 
+    /**
+     * 还有没有值可以迭代
+     */
     public boolean hasNext() {
+      // cursor 表示下一个元素的位置，size 表示实际大小
+      // 如果两者相等，说明已经没有元素可以迭代了，如果不等，说明还可以迭代
       return cursor != size;
     }
 
+    /**
+     * 如果有值可以迭代，迭代的值是多少
+     * @return 迭代的值
+     *
+     * 干了两件事情：
+     * 1：检验能不能继续迭代，
+     * 2：找到迭代的值，并为下一次迭代做准备（cursor+1）
+     */
     @SuppressWarnings("unchecked")
     public E next() {
-      //迭代过程中，判断版本号有无被修改，有被修改，抛 ConcurrentModificationException 异常
+      // 迭代过程中，判断版本号有无被修改，如果有被修改，抛 ConcurrentModificationException 异常
       checkForComodification();
-      //本次迭代过程中，元素的索引位置
+      // 本次迭代过程中，元素的索引位置
       int i = cursor;
       if (i >= size)
         throw new NoSuchElementException();
       Object[] elementData = ArrayList.this.elementData;
       if (i >= elementData.length)
         throw new ConcurrentModificationException();
-      // 下一次迭代时，元素的位置
+      // 下一次迭代时，元素的位置，为下一次迭代做准备
       cursor = i + 1;
       // 返回元素值
       return (E) elementData[lastRet = i];
     }
 
+    /**
+     * 删除当前迭代的值
+     */
     public void remove() {
       // 如果上一次操作时，数组的位置已经小于 0 了，说明数组已经被删除完了
       if (lastRet < 0)
         throw new IllegalStateException();
-      //迭代过程中，判断版本号有无被修改，有被修改，抛 ConcurrentModificationException 异常
+      // 迭代过程中，判断版本号有无被修改，有被修改，抛 ConcurrentModificationException 异常
       checkForComodification();
 
       try {
         ArrayList.this.remove(lastRet);
         cursor = lastRet;
-        // -1 表示元素已经被删除，这里也防止重复删除
+        // -1 目的：表示元素已经被删除，这里也防止重复删除
         lastRet = -1;
-        // 删除元素时 modCount 的值已经发生变化，再此赋值给 expectedModCount
+        // 删除元素时 modCount 的值已经发生变化，在此赋值给 expectedModCount。这样下次迭代时，两者的值是一致的了
         expectedModCount = modCount;
       } catch (IndexOutOfBoundsException ex) {
         throw new ConcurrentModificationException();
@@ -922,6 +978,9 @@ public class ArrayList<E> extends AbstractList<E>
       checkForComodification();
     }
 
+    /**
+     * 版本号比较
+     */
     final void checkForComodification() {
       if (modCount != expectedModCount)
         throw new ConcurrentModificationException();
