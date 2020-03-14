@@ -380,6 +380,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
                 } catch (Throwable ex) {
                     result = null;
                     ran = false;
+                    // 给 outcome 赋值
                     setException(ex);
                 }
                 // 给 outcome 赋值

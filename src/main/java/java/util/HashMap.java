@@ -296,12 +296,16 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * 链表的节点
+     *
+     * Map.Entry是个接口
      */
-    static class Node<K,V> implements Map.Entry<K,V> { //Map.Entry是个接口
-        final int hash;//当前node的hash值
+    static class Node<K,V> implements Map.Entry<K,V> {
+        // 当前node的hash值
+        final int hash;
         final K key;
         V value;
-        Node<K,V> next;//指向当前node的下一个节点，构成单向链表
+        // 指向当前node的下一个节点，构成单向链表
+        Node<K,V> next;
 
         Node(int hash, K key, V value, Node<K,V> next) {
             this.hash = hash;
@@ -574,30 +578,36 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         //红黑树中加入节点
         //在计算新增的节点挂在那个节点上，是线程不安全的，
         //关键在于没有锁住tab,table可能是在动态的变化的
-
-        //1:首先判断新增的节点在红黑树上是不是已经存在。
-        //2:不在的话，根据hashcode，或者自定义的comparTo,递归找到要挂载的节点
-        //3:和要挂载的节点建立父子，前后关系
-        //4:判断是否需要着色，旋转。
-        //5:对红黑树的根节点进行校验
-
-        //h：key 的hash值
+        /**
+         * @param tab 数组
+         * @param h key 的hash值
+         * @param k key
+         * @param v value
+         * @return 如果当前树中已经存在该key，返回找到的相同的值；否则，返回null
+         *
+         * 主要步骤：
+         * 1.判断新增的节点在红黑树上是不是已经存在，如果存在就返回，否则根据hashcode，或者自定义的compareTo，一直循环直到找到要挂载的节点位置
+         * 2.和要挂载的节点建立父子，前后关系
+         * 3.节点插入到红黑树中后进行平衡调整（着色或旋转）
+         * 4.对红黑树的根节点进行校验
+         */
         final TreeNode<K,V> putTreeVal(HashMap<K,V> map, Node<K,V>[] tab,
                                        int h, K k, V v) {
             Class<?> kc = null;
             boolean searched = false;
-            // 找到根节点
+            // 找到红黑树根节点
             TreeNode<K,V> root = (parent != null) ? root() : this;
             // 自旋
             for (TreeNode<K,V> p = root;;) {
+                // dir 标识往左走还是往右走；ph 为 p 的 hash 值；pk 为 p 的 key
                 int dir, ph; K pk;
-                // p hash 值大于 h，说明 p 应该在 h 的右子树
+                // p 的 hash 值大于 h，说明 p 应该在 h 的右子树
                 if ((ph = p.hash) > h)
                     dir = -1;
                 // p hash 值小于 h，说明 p 应该在 h 的左子树
                 else if (ph < h)
                     dir = 1;
-                // 要放进去key在当前树中已经存在了(equals来判断)
+                // 要放进去key在当前树中已经存在了(equals来判断)，直接返回
                 else if ((pk = p.key) == k || (k != null && k.equals(pk)))
                     return p;
                 // 自己实现的Comparable接口的话，不能用hashcode比较了，需要用compareTo
@@ -619,9 +629,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 }
 
                 TreeNode<K,V> xp = p;
-				// 根据dir的值就知道了待插入结点该插在左子树还是右子树了
-				// dir <= 0 往左边走，否则往右边走
+				// 根据dir的值就知道了待插入结点该插在左子树还是右子树：dir <= 0 往左边走，否则往右边走
+                // 如果if条件成立，表明找到了要插入的位置
                 if ((p = (dir <= 0) ? p.left : p.right) == null) {
+                    // 此时 xp 表示当前要插入结点的父节点
                     Node<K,V> xpn = xp.next;
                     // 生成新的树节点
                     TreeNode<K,V> x = map.newTreeNode(h, k, v, xpn);
@@ -635,10 +646,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     x.parent = x.prev = xp;
                     if (xpn != null)
                         ((TreeNode<K,V>)xpn).prev = x;
-                    //balanceInsertion 对红黑树进行着色或旋转，以达到更多的查找效率，着色或旋转的几种场景如下
-                    //着色：新节点总是为红色；如果新节点的父亲是黑色，则不需要重新着色；如果父亲是红色，那么必须通过重新着色或者旋转的方法，再次达到红黑树的5个约束条件
-
-                    //moveRootToFront 方法是把算出来的root放到根节点上
+                    // balanceInsertion：x节点插入到红黑树中后进行平衡调整，即进行着色或旋转，以达到更好的查找效率
+                    // 新插入节点总是为红色；如果新节点的父亲是黑色，则不需要调整；如果父亲是红色，那么必须通过重新着色或者旋转的方法，再次达到红黑树的5个约束条件。具体看balanceInsertion逻辑
+                    // moveRootToFront 方法是把算出来的root放到根节点上
                     moveRootToFront(tab, balanceInsertion(root, x));
                     return null;
                 }
@@ -763,14 +773,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
          * @param map the map
          * @param tab the table for recording bin heads
          * @param index the index of the table being split
-         * @param bit the bit of hash to split on
+         * @param bit the bit of hash to split on 旧数组长度 oldCap
          */
         final void split(HashMap<K,V> map, Node<K,V>[] tab, int index, int bit) {
             TreeNode<K,V> b = this;
             // Relink into lo and hi lists, preserving order
 			/*
-			思路和链表扩容差不多，参见链表扩容注释
-			不同：多了lc和hc计数；多了红黑树转链表的判断和红黑树拆分后树化的逻辑
+			思路和单向链表扩容差不多，因为红黑树也是一个隐藏的双向链表，参见单向链表扩容注释
+			不同：多了lc和hc计数，为了判断原红黑树拆分后是否需要转链表；多了判断红黑树如果拆分后需要再次树化的逻辑
 			*/
             TreeNode<K,V> loHead = null, loTail = null;
             TreeNode<K,V> hiHead = null, hiTail = null;
@@ -778,6 +788,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             for (TreeNode<K,V> e = b, next; e != null; e = next) {
                 next = (TreeNode<K,V>)e.next;
                 e.next = null;
+                // 构建 lower 链表
                 if ((e.hash & bit) == 0) {
                     if ((e.prev = loTail) == null)
                         loHead = e;
@@ -786,6 +797,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     loTail = e;
                     ++lc;
                 }
+                // 构建 higher 链表
                 else {
                     if ((e.prev = hiTail) == null)
                         hiHead = e;
@@ -801,8 +813,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 if (lc <= UNTREEIFY_THRESHOLD)
                     tab[index] = loHead.untreeify(map);
                 else {
+                    // 到这里，说明lower链表仍然是红黑树，直接把整棵树移到新数组的index位置
                     tab[index] = loHead;
-					// 如果lower链表不为空，higher链表为空说明：lower链表上仍然是整颗红黑树，那直接把整棵树移到新数组的index位置即可；否则就需要lower链表树化
+					// 如果higher链表不为空说明：原红黑树被拆分成了两个，那么就需要把lower链表整理成新的红黑树
                     if (hiHead != null) // (else is already treeified)
                         loHead.treeify(tab);
                 }
@@ -812,8 +825,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 if (hc <= UNTREEIFY_THRESHOLD)
                     tab[index + bit] = hiHead.untreeify(map);
                 else {
+                    // 到这里，说明higher链表仍然是红黑树，直接把整棵树移到新数组的index + bit位置
                     tab[index + bit] = hiHead;
-					// 如果higher链表不为空，lower链表为空说明：higher链表上仍然是整颗红黑树，那直接把整棵树移到新数组的index位置即可；否则就需要higher链表树化
+					// 如果lower链表不为空说明：原红黑树被拆分成了两个，那么就需要把higher链表整理成新的红黑树
                     if (loHead != null)
                         hiHead.treeify(tab);
                 }
@@ -826,33 +840,51 @@ public class HashMap<K,V> extends AbstractMap<K,V>
          * 左旋
          * @param root 当前红黑树的根节点
          * @param p 待旋转结点
-         * @param <K> K
-         * @param <V> V
          * @return 当前红黑树的根节点
+         */
+		/*
+        此时：
+        情况1：           情况2：              |     情况3：             情况4：
+            xpp（黑）        xpp（黑）         |     p（红）               p（红）
+            /                /     \           |         \                 /    \
+        p（红）          p（红） xppr（黑）    |        r（黑）     xppl（黑） r（黑）
+           \                \                  |           \                     \
+           r（红）          r（红）            |          x（红）                x（红）
+        情况1左旋结果：   情况2左旋结果：      |     情况3左旋结果：     情况4左旋结果：
+              xpp（黑）        xpp（黑）       |      r（黑）                r（黑）
+              /                /     \         |      /    \                 /    \
+          r（红）          r（红） xppr（黑）  |  p（红） x（红）        p（红） x（红）
+           /                /                  |                          /
+        p（红）          p（红）               |                     xppl（黑）
+        rotateLeft代码左旋结果：
+        if1：         if2：         if3：
+                           pp       pp
+                          /          \
+            r           r             r
+          /           /              /
+        p            p              p
+         \           \               \
+          rl          rl             rl
          */
         static <K,V> TreeNode<K,V> rotateLeft(TreeNode<K,V> root,
                                               TreeNode<K,V> p) {
-			// r是p的右孩子结点，pp是r的祖父结点，rl是r的左孩子结点
+			// r是p的右孩子节点，pp是p的父节点，rl是r的左孩子节点
             TreeNode<K,V> r, pp, rl;
-			// if是左旋的前提条件
+			// 左旋的前提条件：p节点不为空，p节点的右孩子节点r不为空
             if (p != null && (r = p.right) != null) {
-				// 如果rl不为空，则设置p.right=rl，rl.parent = p
-				// 代码含义是处理rl：p以r为圆心左旋为r的左儿子后，那么rl就应该作为p的右儿子
+				// 如果rl不为空，维护rl和p的关系：把rl作为p的右孩子
                 if ((rl = p.right = r.left) != null)
                     rl.parent = p;
-				// 如果祖父结点为null，那么r设置为黑色，r左旋之后即为root节点
-				// 代码含义：如果p没有父节点（p就是原来的root节点），左旋完后p为r的左儿子，那么r就应该作为新的root，颜色变为黑色
+				// 第一个if：如果p的父节点为空，说明p是之前的根节点。那么把r设置为当前的根节点，颜色设置为黑色。跳出if后，再把p设置为r的左孩子
                 if ((pp = r.parent = p.parent) == null)
                     (root = r).red = false;
-				// 如果待旋转结点是pp的左孩子节点
-				// 代码含义：p以r为圆心左旋为r的左儿子后，那么r就应该作为pp的左儿子
+                // 第二个if：到这里，说明p的父节点不为空，且p是pp的左孩子。那么把r设置为pp的左孩子。跳出if后，再把p设置为r的左孩子
                 else if (pp.left == p)
                     pp.left = r;
-				// 如果待旋转结点是pp的右孩子节点
-				// 代码含义：p以r为圆心左旋为r的左儿子后，那么r就应该作为pp的右儿子
+                // 第三个if：到这里，说明p的父节点不为空，且p是pp的右孩子。那么把r设置为pp的右孩子。跳出if后，再把p设置为r的左孩子
                 else
                     pp.right = r;
-				// 代码含义：p以r为圆心左旋为r的左儿子
+				// 跳出if，把p设置为r的左孩子
                 r.left = p;
                 p.parent = r;
             }
@@ -863,24 +895,51 @@ public class HashMap<K,V> extends AbstractMap<K,V>
          * 右旋
          * @param root 当前红黑树的根节点
          * @param p 待旋转结点
-         * @param <K> K
-         * @param <V> V
          * @return 当前红黑树的根节点
+         */
+		/*
+        此时：
+        情况1：          情况2：              |     情况3：            情况4：
+              p（红）        p（红）          |     xpp（黑）            xpp（黑）
+              /             /     \           |          \                /     \
+          l（黑）       l（黑） xppr（黑）    |        p（红）     xppl（黑） p（红）
+           /             /                    |         /                       /
+        x（红）       x（红）                 |      l（红）                 l（红）
+        情况1右旋结果：   情况2右旋结果：     |     情况3右旋结果：  情况4右旋结果：
+            l（黑）           l（黑）         |     xpp（黑）            xpp（黑）
+           /     \           /     \          |          \               /      \
+        x（红） p（红）   x（红） p（红）     |        l（红）     xppl（黑） l（红）
+                                    \         |           \                      \
+                                   xppr（黑） |          p（红）                p（红）
+        rotateRight代码右旋结果：
+        if1：         if2：         if3：
+                     pp            pp
+                      \           /
+          l            l        l
+           \            \        \
+            p           p         p
+          /           /         /
+        lr          lr        lr
          */
         static <K,V> TreeNode<K,V> rotateRight(TreeNode<K,V> root,
                                                TreeNode<K,V> p) {
 			// l是p的左孩子结点，pp是l的祖父结点，lr是l的右孩子结点
             TreeNode<K,V> l, pp, lr;
-			// if是右旋的前提条件
+            // 右旋的前提条件：p节点不为空，p节点的左孩子节点l不为空
             if (p != null && (l = p.left) != null) {
+                // 如果lr不为空，维护lr和p的关系：把lr作为p的左孩子
                 if ((lr = p.left = l.right) != null)
                     lr.parent = p;
+                // 第一个if：如果p的父节点为空，说明p是之前的根节点。那么把l设置为当前的根节点，颜色设置为黑色。跳出if后，再把p设置为l的右孩子
                 if ((pp = l.parent = p.parent) == null)
                     (root = l).red = false;
+                // 第二个if：到这里，说明p的父节点不为空，且p是pp的右孩子。那么把l设置为pp的右孩子。跳出if后，再把p设置为l的右孩子
                 else if (pp.right == p)
                     pp.right = l;
+                // 第三个if：到这里，说明p的父节点不为空，且p是pp的左孩子。那么把l设置为pp的左孩子。跳出if后，再把p设置为l的右孩子
                 else
                     pp.left = l;
+                // 跳出if，把p设置为l的右孩子
                 l.right = p;
                 p.parent = l;
             }
@@ -888,36 +947,46 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
 
         /**
-         * x节点插入到红黑树中后进行平衡调整（也会设置颜色）
+         * x节点插入到红黑树中后进行平衡调整（着色或旋转）
          * @param root 当前红黑树的根节点
          * @param x 新插入到当前红黑树的节点
-         * @param <K> K
-         * @param <V> V
          * @return 当前红黑树的根节点
          */
         static <K,V> TreeNode<K,V> balanceInsertion(TreeNode<K,V> root,
                                                     TreeNode<K,V> x) {
-            // 新插入节点默认为红色
+            // 新插入节点x默认为红色
             x.red = true;
-			// xp表示x的父结点，xpp表示x的祖父结点，xppl表示xpp的左孩子结点，xppr表示xpp的右孩子结点
+			// xp表示x的父节点，xpp表示x的祖父节点，xppl表示xpp的左孩子节点，xppr表示xpp的右孩子节点
             for (TreeNode<K,V> xp, xpp, xppl, xppr;;) {
-				// 如果x没有父结点，则表示x是第一个结点，则自动为根节点
+				// 如果x的父节点为空，即x没有父结点，则表示x是第一个结点，即为根节点
                 if ((xp = x.parent) == null) {
-					// 根节点设置为黑色
+					// 根节点为黑色
                     x.red = false;
                     return x;
                 }
-				// 如果父结点不是红色（就是黑色），或者x没有祖父节点，那么就证明x是第二层节点，父节点为根节点
-				// 这种情况无需进行操作
-				// 根据规律：父节点是黑色，不用进行调整
+                /* 到这里，说明x有父节点 */
+				// 如果x的父结点不是红色（是黑色） 或者 x的祖父节点为空，即x没有祖父节点，则x是第二层的节点，父节点为根节点。这种情况无需进行操作
+				// 红黑树调整规律：【父节点是黑色，不用进行任何调整】
                 else if (!xp.red || (xpp = xp.parent) == null)
                     return root;
-				/* 进入到这里，表示x的父节点为红色 */
+				/* 到这里，说明x有父节点和祖父节点，且x的父节点为红色（祖父节点肯定是黑色的，因为根据红黑树定义4【父子节点之间不能出现两个连续的红节点】） */
 				// 如果x的父节点是祖父结点的左孩子
                 if (xp == (xppl = xpp.left)) {
-					// 如果祖父结点的右孩子，也就是x的叔叔节点不为空，且为红色
-					// 根据规律：父节点是红色，叔叔是红色，这种情况只需要变色即可：父节点和叔叔节点变黑色，祖父节点变为红色
+                    /*
+                    此时：
+                        xpp（黑）
+                        /
+                    xp（红）
+                     */
+					// 如果x的祖父结点的右孩子不为空，即x的叔叔节点不为空，且为红色
+					// 红黑树调整规律：【父节点是红色，叔叔节点是红色，这种情况只需要变色即可：父节点和叔叔节点变为黑色，祖父节点变为红色】
                     if ((xppr = xpp.right) != null && xppr.red) {
+                        /*
+                        此时：
+                            xpp（黑）
+                            /     \
+                        xp（红） xppr（红）
+                         */
 						// 叔叔节点变为黑色
                         xppr.red = false;
 						// 父节点变为黑色
@@ -927,96 +996,168 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 						// 将x替换为祖父节点进行下一次递归调整
                         x = xpp;
                     }
-					// 根据规律：如果叔叔节点为空，或者为黑色，需要旋转+变色
+                    // 如果x的祖父结点的右孩子为空，即x的叔叔节点为空 或者 x的叔叔节点为黑色
+					// 红黑树调整规律：【如果父节点是红色，叔叔节点为空或者为黑色，需要旋转+变色】，具体如下：【如果x节点是父节点的右孩子：左旋（xp）+变色（xp+xpp）+右旋（xpp）】；【如果x节点是父节点的左孩子：变色（xp+xpp）+右旋（xpp）】
                     else {
-						// 如果x节点为xp的右孩子
-						// 这种情况下需要先左旋再右旋
+                        /*
+                        此时：
+                            xpp（黑）        xpp（黑）
+                            /                /     \
+                        xp（红）         xp（红） xppr（黑）
+                         */
+						// 如果x节点为xp的右孩子，这种情况下需要先左旋一次
                         if (x == xp.right) {
-							// 先进行左旋，并且把x替换为xp进行递归，在左旋的过程中产生了新的root节点
-							/*
-							x = xp之前当前情况是这样：
-							 xpp（黑）
-							 /
-							xp（红）
-							 \
-							  x（红）
-							*/
+                            /*
+                            此时：
+                                xpp（黑）        xpp（黑）
+                                /                /     \
+                            xp（红）         xp（红） xppr（黑）
+                               \                \
+                               x（红）          x（红）
+                             */
+							// 以xp作为旋转节点，进行左旋，在左旋的过程中可能会产生新的root节点（这里肯定不会）
+                            // 将x替换为父节点进行下一次递归调整
                             root = rotateLeft(root, x = xp);
 							/*
-							当前情况是这样：
-								xpp（黑）
-								/
-							   xp（红）
-							  /
-							 x（红）
+							左旋结果：
+                                  xpp（黑）        xpp（黑）
+                                  /                /     \
+                              x（红）          x（红） xppr（黑）
+                               /                /
+                            xp（红）          xp（红）
 							*/
-							// x替换后，修改xp和xpp与x的关系
+							// 将x替换为父节点后，修改x，xp，xpp的关系
                             xpp = (xp = x.parent) == null ? null : xp.parent;
+                            /*
+                            最终结果，也是下面if条件成立的情况：
+                                  xpp（黑）        xpp（黑）
+                                  /                /     \
+                              xp（红）          xp（红） xppr（黑）
+                               /                /
+                            x（红）          x（红）
+                             */
                         }
-						// 如果x本来是左孩子，或者已经经过了上面的左旋之后，进行变色加右旋
+						// 如果x节点为xp的左孩子（或者x节点本来为xp的右孩子但经过了上面的左旋后，其实也是这种情况），那么就进行变色加右旋
                         if (xp != null) {
 							// 父节点变为黑色
                             xp.red = false;
                             if (xpp != null) {
 								// 祖父节点变为红色
                                 xpp.red = true;
-								/*
-								当前情况是这样：
-									xpp（红）
-									/
-								   xp（黑）
-								  /
-								 x（红）
-								*/
+                                /*
+                                此时：
+                                      xpp（红）        xpp（红）
+                                      /                /     \
+                                  xp（黑）          xp（黑） xppr（黑）
+                                   /                /
+                                x（红）          x（红）
+                                 */
+                                // 以xpp作为旋转节点，进行右旋，在右旋的过程中可能会产生新的root节点（这里肯定不会）
                                 root = rotateRight(root, xpp);
+                                /*
+                                最终结果：
+                                    xp（黑）            xp（黑）
+                                   /     \             /     \
+                                x（红） xpp（红）   x（红） xpp（红）
+                                                              \
+                                                             xppr（黑）
+                                 */
                             }
                         }
                     }
                 }
 				// 如果x的父节点是祖父结点的右孩子
                 else {
-					// 如果祖父结点的左孩子，也就是x的叔叔节点不为空，且为红色
-					// 根据规律：父节点是红色，叔叔是红色，这种情况只需要变色即可：父节点和叔叔节点变黑色，祖父节点变为红色
+                    /*
+                    此时：
+                    xpp（黑）
+                        \
+                       xp（红）
+                     */
+                    // 如果x的祖父结点的左孩子不为空，即x的叔叔节点不为空，且为红色
+                    // 红黑树调整规律：【父节点是红色，叔叔节点是红色，这种情况只需要变色即可：父节点和叔叔节点变为黑色，祖父节点变为红色】
                     if (xppl != null && xppl.red) {
+                        /*
+                        此时：
+                            xpp（黑）
+                             /     \
+                        xppl（红） xp（红）
+                         */
+                        // 叔叔节点变为黑色
                         xppl.red = false;
+                        // 父节点变为黑色
                         xp.red = false;
+                        // 祖父结点变为红色
                         xpp.red = true;
+                        // 将x替换为祖父节点进行下一次递归调整
                         x = xpp;
                     }
+                    // 如果x的祖父结点的左孩子为空，即x的叔叔节点为空 或者 x的叔叔节点为黑色
+                    // 红黑树调整规律：【如果父节点是红色，叔叔节点为空或者为黑色，需要旋转+变色】，具体如下：【如果x节点是父节点的左孩子：右旋（xp）+变色（xp+xpp）+左旋（xpp）】；【如果x节点是父节点的右孩子：变色（xp+xpp）+左旋（xpp）】
                     else {
+                        /*
+                        此时：
+                        xpp（黑）          xpp（黑）
+                             \              /     \
+                           xp（红）   xppl（黑） xp（红）
+                         */
+                        // 如果x节点为xp的左孩子，这种情况下需要先右旋一次
                         if (x == xp.left) {
-							/*
-							x = xp之前当前情况是这样：
-							xpp（黑）
-							  \
-							  xp（红）
-							  /
-							 x（红）
-							*/
+                            /*
+                            此时：
+                            xpp（黑）          xpp（黑）
+                                 \              /     \
+                               xp（红）   xppl（黑） xp（红）
+                                /                     /
+                            x（红）               x（红）
+                             */
+                            // 以xp作为旋转节点，进行右旋，在右旋的过程中可能会产生新的root节点（这里肯定不会）
+                            // 将x替换为父节点进行下一次递归调整
                             root = rotateRight(root, x = xp);
-							/*
-							当前情况是这样：
-							xpp（黑）
-							  \
-							   xp（红）
-								\
-								 x（红）
+                            /*
+							右旋结果：
+                            xpp（黑）            xpp（黑）
+                                 \               /      \
+                               x（红）     xppl（黑） x（红）
+                                  \                      \
+                                 xp（红）               xp（红）
 							*/
+                            // 将x替换为父节点后，修改x，xp，xpp的关系
                             xpp = (xp = x.parent) == null ? null : xp.parent;
+                            /*
+                            最终结果，也是下面if条件成立的情况：
+                            xpp（黑）            xpp（黑）
+                                 \               /      \
+                               xp（红）     xppl（黑） xp（红）
+                                  \                      \
+                                 x（红）                x（红）
+                             */
                         }
+                        // 如果x节点为xp的右孩子（或者x节点本来为xp的左孩子但经过了上面的右旋后，其实也是这种情况），那么就进行变色加左旋
                         if (xp != null) {
+                            // 父节点变为黑色
                             xp.red = false;
                             if (xpp != null) {
+                                // 祖父节点变为红色
                                 xpp.red = true;
-								/*
-								当前情况是这样：
-								xpp（红）
-								  \
-								   xp（黑）
-									\
-									 x（红）
-								*/
+                                /*
+                                此时：
+                                xpp（红）            xpp（红）
+                                     \               /      \
+                                   xp（黑）     xppl（黑） xp（黑）
+                                      \                      \
+                                     x（红）                x（红）
+                                 */
+                                // 以xpp作为旋转节点，进行左旋，在左旋的过程中可能会产生新的root节点（这里肯定不会）
                                 root = rotateLeft(root, xpp);
+                                /*
+                                最终结果：
+                                    xp（黑）                xp（黑）
+                                    /    \                 /    \
+                                xpp（红） x（红）        xpp（红） x（红）
+                                                       /
+                                                  xppl（黑）
+                                 */
                             }
                         }
                     }
@@ -1165,6 +1306,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     static final int hash(Object key) {
         int h;
+        // key的hashCode() ^ key的hashCode()右移16
+        // 异或运算（^）：不同则为1
         return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
     }
 
@@ -1225,6 +1368,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The load factor for the hash table.
+     * 加载因子，默认0.75f
      *
      * @serial
      */
@@ -1419,38 +1563,38 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * Implements Map.put and related methods
      *
-     * @param hash hash for key 通过 hash 算法计算出来的值
+     * @param hash hash for key key通过hash算法计算出来的值
      * @param key the key
      * @param value the value to put
      * @param onlyIfAbsent if true, don't change existing value 如果是 false 表示如果 key 已经存在了，会用新值覆盖原来的值，默认为 false
-     * @param evict if false, the table is in creation mode. hashMap没有用到
+     * @param evict if false, the table is in creation mode. hashMap没有用到该参数
      * @return previous value, or null if none
+     *
+     * 主要步骤：
+     * 1.如果是空数组，使用 resize 方法初始化后，进入2；否则，直接进入2
+     * 2.计算数组索引位置下标，判断如果数组该位置没有值，直接在当前位置新增赋值后，跳出外层if；否则，进入3
+     * 3.说明 hash 冲突，解决：
+     * 3.1.先判断数组当前位置的值是否和要插入的值相等，如果相等，跳出内层if，判断是否要覆盖老值，返回；否则，进入3.2
+     * 3.2.再判断当前数组位置是否是红黑树，如果是，调用红黑树的插入逻辑，如果返回不是空，说明找到了和要插入的值相等的值，跳出内层if，判断是否要覆盖老值，返回；如果返回空，说明新增成功，跳出外层if；如果当前数组位置不是红黑树，进入3.3
+     * 3.3.如果到了这里，说明当前数组位置是链表，循环遍历链表，如果找到了和要插入的值相等的值，跳出内层if，判断是否要覆盖老值，返回；如果没找到和要插入的值相等的值，把新值插入到链表尾部（尾插法），判断是否树化，新增成功，跳出外层if
+     * 4.记录modCount
+     * 5.判断是否需要扩容。扩容条件：实际大小 > 扩容的门槛。和1.7判断扩容条件有区别，1.7还判断了当前要放入的数组索引位置处是不是空，不是空才扩容
      */
-    //1:空数组初始化。
-    //2:key计算的数组索引下，如果没有值，直接新增赋值
-    //3:如果hash冲突，分成2种，一个是链表，一个是红黑树
-    //4:如果当前桶已经是红黑树了。调用红黑树新增的方法
-    //5:如果是链表，递归循环
-    //6:链表中的元素的key有和入参key相等的，允许覆盖值的话直接覆盖
-    //put方法默认覆盖
-    //7:如果新增的元素在链表中不存在，则新增，新增到链表的尾部
-    //8:新增时，判断如果链表的长度大于等于8时，转红黑树
-    //9:如果数组的实际使用大小大于等于扩容的门槛，直接扩容
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
-        // n 表示数组的长度大小；i 为数组索引下标；p 为 i 位置的 Node 值
+        // n 表示数组的长度大小；i 为数组索引位置下标；p 表示table[i]的第一个节点值
         Node<K,V>[] tab; Node<K,V> p; int n, i;
         // 如果数组为空，使用 resize 方法初始化
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
-        // hashCode的算法先右移16 & (数组大小 - 1)
+        // 数组索引位置下标i = hash & (数组大小 - 1)
         // 与运算（&）：都为1则为1
-        // 如果当前索引位置是空的，直接生成新的节点在当前索引位置上
+        // 如果当前索引位置是空的，直接生成新的节点在当前数组索引位置上
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
         // 如果当前索引位置有值，解决 hash 冲突
         else {
-            // e 为要插入的当前位置的 Node 的临时变量
+            // e 为要插入的当前位置的 Node 的临时变量；k 为 p 的 key
             Node<K,V> e; K k;
             // 如果 key 的 hash 和 值 都相等，直接把当前数组下标位置的 Node 赋值给 e
             if (p.hash == hash &&
@@ -1463,16 +1607,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             else {
                 // 自旋
                 // binCount用来记录链表长度
+                // 此时数组位置至少有一个和要插入节点不相等的值
                 for (int binCount = 0; ; ++binCount) {
                     // e = p.next 表示从头开始，遍历链表
-                    // 如果 p.next == null 表明 p 是链表的尾节点
-                    // 如果一直到链表的尾节点，还没找到和新增的元素相等的节点，直接把节点新增到链表最后
+                    // 如果 e == null 表明 p 是链表的尾节点；如果一直遍历到链表的尾节点，还没找到和新增的元素相等的节点，直接把节点新增到链表最后
                     if ((e = p.next) == null) {
-                        // p.next是新增的节点，但是e仍然是null：因为e和p.next都是持有对null的引用，即使p.next后来赋予了值，只是改变了p.next指向的引用，和e没有关系
-                        // 把新节点放到链表的尾部
+                        // p.next 指向新增的节点，即把新节点放到链表的尾部（尾插法）。但是e仍然是null：因为e和p.next都是持有对null的引用，即使p.next后来赋予了值，只是改变了p.next指向的引用，和e没有关系
                         p.next = newNode(hash, key, value, null);
                         // 当链表的长度大于等于 8 时，链表转红黑树（binCount是从0开始算的）
-						// 这里有个点：binCount为7之前，前边已经新增节点了，也就是说，虽然判断长度大于等于 8，但其实链表里已经有9个节点了
+						// 这里有个点：binCount为7时，上一步已经新增节点了，也就是说，虽然判断长度大于等于 8，但其实链表里已经有9个节点了
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
 							// 链表树化
                             treeifyBin(tab, hash);
@@ -1486,7 +1629,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     p = e;
                 }
             }
-            // e != null 说明要新增的位置上本来就有一个值
+            // e != null 说明本来就存在一个值和要插入的值相等，那个老的值就是 e
             if (e != null) {
                 V oldValue = e.value;
                 // 当 onlyIfAbsent 为 false 时，才会覆盖值
@@ -1510,29 +1653,30 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
-     * 该方法两个作用：数组初始化 或 双倍扩容
+     * 该方法有两个作用：数组初始化 或 双倍扩容
      * 如果是空的，按照初始容量进行初始化
      * 扩容是双倍扩容，要么还在原来索引位置，要么 movewith a power of two offset in the new table (不知道如何翻译)
-     * @return
+     * @return 扩容后的数组
      */
     final Node<K,V>[] resize() {
 		// 旧数组
         Node<K,V>[] oldTab = table;
 		// 旧数组容量
         int oldCap = (oldTab == null) ? 0 : oldTab.length;
-		// 旧阈值
+		// 旧阈值，如果构造方法不是HashMap(int initialCapacity, float loadFactor) 和 HashMap(Map<? extends K, ? extends V> m)，那么就是0
         int oldThr = threshold;
 		// 新容量；新阈值
         int newCap, newThr = 0;
         if (oldCap > 0) {
-            //老数组大小 >= 最大值，不扩容
+            // 旧数组大小 >= 最大值，不扩容
             if (oldCap >= MAXIMUM_CAPACITY) {
                 threshold = Integer.MAX_VALUE;
                 return oldTab;
             }
-            // 老数组大小2倍之后，仍然在最小值和最大值之间，扩容成功
+            // 旧数组大小2倍之后，仍然 < 最大值 && 旧数组容量 >= 16
             else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY &&
                      oldCap >= DEFAULT_INITIAL_CAPACITY)
+                // 新阈值 = 2倍的旧阈值
                 newThr = oldThr << 1; // double threshold
         }
         else if (oldThr > 0) // initial capacity was placed in threshold
@@ -1543,6 +1687,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             newCap = DEFAULT_INITIAL_CAPACITY;
             newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
         }
+        /* 上面的逻辑肯定能确定出newCap，如果没有确定出newThr，在这里确定 */
         if (newThr == 0) {
             float ft = (float)newCap * loadFactor;
             newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?
@@ -1556,19 +1701,22 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {
                 Node<K,V> e;
-				// 从数组的当前遍历索引位置的第一个元素开始
+				// 从旧数组中当前遍历的索引位置的第一个元素开始
                 if ((e = oldTab[j]) != null) {
+                    // 旧数组中当前遍历的索引位置值置为null
                     oldTab[j] = null;
                     // 如果节点只有一个值，直接计算新数组索引位置并赋值
                     if (e.next == null)
                         newTab[e.hash & (newCap - 1)] = e;
                     // 如果是红黑树
                     else if (e instanceof TreeNode)
+                        /* 红黑树扩容：拆分 */
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
                     // 如果是链表（规避了8版本以下的成环问题）
                     else { // preserve order
-                        // loHead，loTail 表示低位（lower），意思是：扩容后，lower链表中的元素在新数组中计算出来的索引位置不变
-                        // hiHead，hiTail 表示高位（higher），意思是：扩容后，higher链表中的元素在新数组中计算出来的索引位置发生变化（为原链表索引位置 + oldTable.length）
+                        /* 链表扩容：遍历数组的每隔位置，每个数组位置再次遍历构建lower链表和higher链表后，直接放到新数组中 */
+                        // loHead，loTail lo表示低位（lower），lower链表意思是：扩容后，lower链表中的元素在新数组中计算出来的索引位置不变
+                        // hiHead，hiTail hi表示高位（higher），higher链表意思是：扩容后，higher链表中的元素在新数组中计算出来的索引位置发生变化（为原链表索引位置 + oldTable.length）
                         Node<K,V> loHead = null, loTail = null;
                         Node<K,V> hiHead = null, hiTail = null;
                         Node<K,V> next;
@@ -1585,7 +1733,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 							那么此时 hashcode 是 8 的值计算出来的(e.hash & oldCap) == 0，这些节点会组成lower链表，放到新数组中的索引位置为原链表索引位置；
 							hashcode 是 17 的值计算出来的(e.hash & oldCap) != 0，这些节点会组成higher链表，放到新数组中的索引位置为原链表索引位置 + oldTable.length
 							*/
-                            // lower链表
+                            // 构建lower链表
                             if ((e.hash & oldCap) == 0) {
                                 if (loTail == null)
                                     loHead = e;
@@ -1594,7 +1742,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                     loTail.next = e;
                                 loTail = e;
                             }
-                            // higher链表
+                            // 构建higher链表
                             else {
                                 if (hiTail == null)
                                     hiHead = e;

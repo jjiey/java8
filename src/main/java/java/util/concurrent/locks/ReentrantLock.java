@@ -131,7 +131,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
 
         /**
          * 尝试获得非公平锁
-         * tryLock() 和 非公平锁NonfairSync#tryAcquire(int) 的底层都是直接调用该方法
+         * tryLock() 和 非公平锁 NonfairSync#tryAcquire(int) 的底层都是直接调用该方法
          * 这个方法为什么不写在NonfairSync类里（像FairSync类一样）？唯一能想到的解释就是在tryLock()里不用new NonfairSync()或new FairSync()都可以直接进行调用
          */
         final boolean nonfairTryAcquire(int acquires) {
@@ -150,13 +150,13 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             else if (current == getExclusiveOwnerThread()) {
                 // 当前线程持有锁的数量 + acquires
                 int nextc = c + acquires;
-                // int 是有最大值的，<0 表示持有锁的数量超过了 int 的最大值
+                // int 是有最大值的，< 0 表示持有锁的数量超过了 int 的最大值
                 if (nextc < 0) // overflow
                     throw new Error("Maximum lock count exceeded");
                 setState(nextc);
                 return true;
             }
-            //否则线程进入同步队列
+            // 否则线程进入同步队列
             return false;
         }
 
@@ -286,7 +286,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
                     return true;
                 }
             }
-            // 可重入锁
+            // 可重入锁逻辑
             else if (current == getExclusiveOwnerThread()) {
                 int nextc = c + acquires;
                 if (nextc < 0)

@@ -178,11 +178,12 @@ public class CountDownLatch {
 
         // 如果当前同步器的状态是 0 的话，表示可获得锁
         protected int tryAcquireShared(int acquires) {
+            // 如果 state 还没有递减到0，就入队等待
             return (getState() == 0) ? 1 : -1;
         }
 
         /**
-         * 对 state 进行递减，直到 state 变成 0；
+         * 对 state 进行递减，直到 state 变成 0
          * @param releases
          * @return 如果 state 递减为 0 时，返回 true，其余返回 false
          */

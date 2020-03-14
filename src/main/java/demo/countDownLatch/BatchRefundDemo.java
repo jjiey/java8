@@ -24,6 +24,9 @@ public class BatchRefundDemo {
 
     private static final ExecutorService EXECUTOR_SERVICE = new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(20));
 
+    /**
+     * 批量退款数量
+     */
     private static final int INIT_REFUND_COUNT = 30;
 
     public static void main(String[] args) throws InterruptedException {
@@ -39,7 +42,7 @@ public class BatchRefundDemo {
             // 使用 Callable，因为我们需要等到返回值
             Future<Boolean> future = EXECUTOR_SERVICE.submit(() -> {
                 boolean result = refundByItem(item);
-                // 每个子线程都会执行 countDown，使 state -1 ，但只有最后一个才能真的唤醒主线程
+                // 每个子线程都会执行 countDown，使 state - 1 ，但只有最后一个才能真的唤醒主线程
                 countDownLatch.countDown();
                 return result;
             });
