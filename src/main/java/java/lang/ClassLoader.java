@@ -403,6 +403,8 @@ public abstract class ClassLoader {
     {
         synchronized (getClassLoadingLock(name)) {
             // First, check if the class has already been loaded
+            // 翻译：首先，检查请求的类是否已经被加载过了
+            // 从本地classloader的缓存引用中找class
             Class<?> c = findLoadedClass(name);
             if (c == null) {
                 long t0 = System.nanoTime();
@@ -415,11 +417,13 @@ public abstract class ClassLoader {
                 } catch (ClassNotFoundException e) {
                     // ClassNotFoundException thrown if class not found
                     // from the non-null parent class loader
+                    // 如果父类加载器抛出ClassNotFoundException异常，说明父类加载器无法完成加载请求
                 }
 
                 if (c == null) {
                     // If still not found, then invoke findClass in order
                     // to find the class.
+                    // 当父类家加载器无法加载时，再调用本身的findClass()方法来进行类加载
                     long t1 = System.nanoTime();
                     c = findClass(name);
 
@@ -636,6 +640,7 @@ public abstract class ClassLoader {
      *
      * @since  1.1
      */
+    // 把class文件对象加载成Class对象并且放进ClassLoader缓存中
     protected final Class<?> defineClass(String name, byte[] b, int off, int len)
         throws ClassFormatError
     {

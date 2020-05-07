@@ -1308,6 +1308,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         int h;
         // key的hashCode() ^ key的hashCode()右移16
         // 异或运算（^）：不同则为1
+        // 可以看到，如果key == null，返回的是0。后边计算数组位置(n - 1) & hash结果就是0，也就是说null会放在数组第0个位置
         return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
     }
 

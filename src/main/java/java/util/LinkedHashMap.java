@@ -212,16 +212,24 @@ public class LinkedHashMap<K,V>
 
     // internal utilities
 
-
+    /**
+     * 用dst替换src的位置
+     * @param src source
+     * @param dst destination
+     */
     // apply src's links to dst
     private void transferLinks(LinkedHashMap.Entry<K,V> src,
                                LinkedHashMap.Entry<K,V> dst) {
+        // dst的前一个节点 指向 src的前一个节点
         LinkedHashMap.Entry<K,V> b = dst.before = src.before;
+        // dst的后一个节点 指向 src的后一个节点
         LinkedHashMap.Entry<K,V> a = dst.after = src.after;
+        // 如果dst的前一个节点为空，说明dst是头节点；否则维护dsc的双向链表关系
         if (b == null)
             head = dst;
         else
             b.after = dst;
+        // 如果dst的后一个节点为空，说明dst是尾节点；否则维护dsc的双向链表关系
         if (a == null)
             tail = dst;
         else
@@ -239,7 +247,7 @@ public class LinkedHashMap<K,V>
     Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
         LinkedHashMap.Entry<K,V> p =
             new LinkedHashMap.Entry<K,V>(hash, key, value, e);
-        // 节点追加到链表的尾部
+        // p节点追加到链表的尾部
         linkNodeLast(p);
         return p;
     }
@@ -247,10 +255,10 @@ public class LinkedHashMap<K,V>
     private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
         LinkedHashMap.Entry<K,V> last = tail;
         tail = p;
-        // last 为空，说明链表为空，首位节点相等
+        // 如果 last 为空，说明链表为空，则首位节点相等
         if (last == null)
             head = p;
-        // 链表有数据，直接建立本节点和上个尾节点之间的前后关系即可
+        // 否则，说明链表有数据，则建立 p 节点和上个尾节点之间的双向链表关系
         else {
             p.before = last;
             last.after = p;
@@ -259,61 +267,72 @@ public class LinkedHashMap<K,V>
 
     TreeNode<K,V> newTreeNode(int hash, K key, V value, Node<K,V> next) {
         TreeNode<K,V> p = new TreeNode<K,V>(hash, key, value, next);
+        // p节点追加到链表的尾部
         linkNodeLast(p);
         return p;
     }
-
-
 
     Node<K,V> replacementNode(Node<K,V> p, Node<K,V> next) {
         LinkedHashMap.Entry<K,V> q = (LinkedHashMap.Entry<K,V>)p;
         LinkedHashMap.Entry<K,V> t =
             new LinkedHashMap.Entry<K,V>(q.hash, q.key, q.value, next);
+        // 用 t 替换 q 的位置
         transferLinks(q, t);
         return t;
     }
-
-
 
     TreeNode<K,V> replacementTreeNode(Node<K,V> p, Node<K,V> next) {
         LinkedHashMap.Entry<K,V> q = (LinkedHashMap.Entry<K,V>)p;
         TreeNode<K,V> t = new TreeNode<K,V>(q.hash, q.key, q.value, next);
+        // 用 t 替换 q 的位置
         transferLinks(q, t);
         return t;
     }
 
+    /**
+     * 从双向链表中删除e节点
+     * @param e 待删除节点
+     */
     void afterNodeRemoval(Node<K,V> e) { // unlink
         LinkedHashMap.Entry<K,V> p =
             (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
+        // p节点的前后节点都指向null
         p.before = p.after = null;
+        // 如果p的前一个节点为空，说明a为头节点；否则，维护a和b的双向链表关系
         if (b == null)
             head = a;
         else
             b.after = a;
+        // 如果p的后一个节点为空，说明b为尾节点；否则，维护a和b的双向链表关系
         if (a == null)
             tail = b;
         else
             a.before = b;
     }
 
-
-
-    // 节点移动到队尾
+    /**
+     * 节点移动到队尾
+     * @param e 待移动节点
+     */
     void afterNodeAccess(Node<K,V> e) { // move node to last
         LinkedHashMap.Entry<K,V> last;
-        // accessOrder 为 true，并且 e 不为队尾的时候
+        // accessOrder 为 true（按照访问顺序），并且 e 不为队尾的时候
         if (accessOrder && (last = tail) != e) {
             LinkedHashMap.Entry<K,V> p =
                 (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
+            // p节点的后一个节点指向null
             p.after = null;
+            // 如果b为null，说明之前的e节点是头节点，那么现在要设置a为头节点；否则，维护a和b的双向链表关系
             if (b == null)
                 head = a;
             else
                 b.after = a;
+            // 如果a为null，说明之前的e节点是尾节点，那么现在把last指向b节点（last往前移动了一位）；否则，维护a和b的双向链表关系
             if (a != null)
                 a.before = b;
             else
                 last = b;
+            // 如果last为null，说明。。。
             if (last == null)
                 head = p;
             else {
@@ -325,14 +344,17 @@ public class LinkedHashMap<K,V>
         }
     }
 
-    // 删除不经常使用的元素
+    /**
+     * 删除不经常使用的元素
+     * @param evict evict意思为驱逐，为true表示要删除，false表示不删除
+     */
     void afterNodeInsertion(boolean evict) { // possibly remove eldest
-        // 得到元素头节点
+        // 元素头节点
         LinkedHashMap.Entry<K,V> first;
-        // removeEldestEntry 来控制删除策略
+        // removeEldestEntry() 来控制删除策略
         if (evict && (first = head) != null && removeEldestEntry(first)) {
             K key = first.key;
-            // removeNode 删除节点
+            // 调用HashMap的方法删除节点
             removeNode(hash(key), key, null, false, true);
         }
     }
@@ -484,10 +506,12 @@ public class LinkedHashMap<K,V>
      * with the opportunity to remove the eldest entry each time a new one
      * is added.  This is useful if the map represents a cache: it allows
      * the map to reduce memory consumption by deleting stale entries.
+     * 翻译：如果这个map要删除最老的entry就返回true。这个方法在put()和putAll()插入一个新的entry后被调用。它为实现者提供了在每次添加新entry时删除最老的entry的机会。如果map表示一个缓存，这是很有用的：它允许map通过删除陈旧的entry来减少内存消耗
      *
      * <p>Sample use: this override will allow the map to grow up to 100
      * entries and then delete the eldest entry each time a new entry is
      * added, maintaining a steady state of 100 entries.
+     * 翻译：使用示例：这个覆盖将允许map增长到100个entries，然后在每次添加一个新entry时删除最老的entry，维护一个100个entries的稳定状态。示例中 &gt; 代表 >
      * <pre>
      *     private static final int MAX_ENTRIES = 100;
      *
@@ -506,6 +530,7 @@ public class LinkedHashMap<K,V>
      *
      * <p>This implementation merely returns <tt>false</tt> (so that this
      * map acts like a normal map - the eldest element is never removed).
+     * 翻译：这个实现仅返回false（以便这个map就像一个正常的map - 最年长的元素永远不会被删除）
      *
      * @param    eldest The least recently inserted entry in the map, or if
      *           this is an access-ordered map, the least recently accessed
@@ -517,6 +542,8 @@ public class LinkedHashMap<K,V>
      *           entry, the eldest entry is also the newest.
      * @return   <tt>true</tt> if the eldest entry should be removed
      *           from the map; <tt>false</tt> if it should be retained.
+     *
+     * 控制删除策略
      */
     protected boolean removeEldestEntry(Map.Entry<K,V> eldest) {
         return false;

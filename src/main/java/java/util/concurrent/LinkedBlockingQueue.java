@@ -357,12 +357,13 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
-     * 指定链表容量大小，链表头尾相等，节点值（item）都是 null
+     * 指定链表容量大小
      * @param capacity 链表容量
      */
     public LinkedBlockingQueue(int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException();
         this.capacity = capacity;
+        // 链表头尾相等，节点值（item）都是 null
         last = head = new Node<E>(null);
     }
 
@@ -371,6 +372,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
      * @param c 已有集合数据
      */
     public LinkedBlockingQueue(Collection<? extends E> c) {
+        // 链表大小默认为 Integer 的最大值
         this(Integer.MAX_VALUE);
         final ReentrantLock putLock = this.putLock;
         putLock.lock(); // Never contended, but necessary for visibility
@@ -380,8 +382,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                 // 集合内的元素不能为空
                 if (e == null)
                     throw new NullPointerException();
-                // capacity 代表链表的大小，在这里是 Integer 的最大值。如果集合类的大小大于 Integer 的最大值，就会报错
-                // 其实这个判断完全可以放在 for 循环外面，这样可以减少 Integer 的最大值次循环(最坏情况)
+                // capacity 代表链表的大小（在这里是 Integer 最大值）
+                // 其实这个判断完全可以放在 for 循环外面，这样可以减少 Integer 的最大值次循环（最坏情况）
                 if (n == capacity)
                     throw new IllegalStateException("Queue full");
                 enqueue(new Node<E>(e));
@@ -424,7 +426,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     /**
      * 把e新增到队列的尾部
      * 如果有可以新增的空间的话，直接新增成功，否则当前线程陷入等待
-     * @param e
+     * @param e 新增元素
      * @throws InterruptedException
      */
     public void put(E e) throws InterruptedException {
@@ -438,8 +440,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         // 设置可中断锁
         putLock.lockInterruptibly();
         try {
-            // 队列满了
-            // 当前线程阻塞，等待其他线程的唤醒(其他线程 take 成功后就会唤醒此处被阻塞的线程)
+            // 如果队列满了，当前线程阻塞，等待其他线程的唤醒
+            // 其他线程 take 成功后 或 其他线程 put 成功后发现队列还没有满 就会尝试唤醒此处被阻塞的线程
             while (count.get() == capacity) {
                 // await 无限等待
                 notFull.await();
@@ -448,8 +450,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             // 队列没有满，直接新增到队列的尾部
             enqueue(node);
 
-            // 新增计数赋值，注意这里 getAndIncrement 返回的是旧值
-            // 这里的 c 是比真实的 count 小 1 的
+            // 新增计数赋值，注意这里返回的是旧值。即 c 是比真实的 count 小 1 的
             c = count.getAndIncrement();
 
             // 如果链表现在的大小 < 链表的容量，说明队列未满，可以尝试唤醒一个 put 的等待线程
@@ -460,7 +461,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             // 释放锁
             putLock.unlock();
         }
-        // c == 0，代表队列里面有一个元素。此时会尝试唤醒一个take的等待线程
+        // c == 0，代表队列里面有一个元素。此时会尝试唤醒一个 take 的等待线程
         if (c == 0)
             signalNotEmpty();
     }
@@ -486,18 +487,17 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         // 设置可中断锁
         putLock.lockInterruptibly();
         try {
-            // 队列满了，会阻塞一段时间后，继续运行
+            // 如果队列满了，会阻塞一段时间后，继续运行
             while (count.get() == capacity) {
-                // 如果当前等待的时间小于等于 0，说明已经超过等待时间了，直接返回 false（这里是和put方法主要不同的地方）
+                // 如果当前等待的时间 <= 0，说明已经超过等待时间了，直接返回 false（这里是和put方法主要不同的地方）
                 if (nanos <= 0)
                     return false;
-                // 阻塞等待 nanos 时间，如果超过这段时间，返回的值小于等于 0
+                // 阻塞等待 nanos 时间，如果超过这段时间，返回的值 <= 0
                 nanos = notFull.awaitNanos(nanos);
             }
             // 队列没有满，直接新增到队列的尾部
             enqueue(new Node<E>(e));
-            // 新增计数赋值，注意这里 getAndIncrement 返回的是旧值
-            // 这里的 c 是比真实的 count 小 1 的
+            // 新增计数赋值，注意这里返回的是旧值。即 c 是比真实的 count 小 1 的
             c = count.getAndIncrement();
             // 如果链表现在的大小 < 链表的容量，说明队列未满，可以尝试唤醒一个 put 的等待线程
             if (c + 1 < capacity)
@@ -506,7 +506,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             // 释放锁
             putLock.unlock();
         }
-        // c == 0，代表队列里面有一个元素。此时会尝试唤醒一个take的等待线程
+        // c == 0，代表队列里面有一个元素。此时会尝试唤醒一个 take 的等待线程
         if (c == 0)
             signalNotEmpty();
         return true;
@@ -565,18 +565,17 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
             }
             // 非空队列，从队列的头部拿一个出来
             x = dequeue();
-            // 减一计算，注意 getAndDecrement 返回的值是旧值
-            // c 比真实的 count 大1
+            // 减一计算，注意返回的是旧值，c 比真实的 count 大1
             c = count.getAndDecrement();
 
-            // 如果队列里面有值，从take的等待线程里面唤醒一个。意思是队列里面有值啦，唤醒之前被阻塞的线程
+            // 如果队列里面有值，从 take 的等待线程里面唤醒一个。意思是队列里面有值了，唤醒之前被阻塞的线程
             if (c > 1)
                 notEmpty.signal();
         } finally {
-            //释放锁
+            // 释放锁
             takeLock.unlock();
         }
-        // 如果队列空闲还剩下一个，尝试从put的等待线程中唤醒一个
+        // 如果队列空闲还剩下一个，尝试从 put 的等待线程中唤醒一个
         if (c == capacity)
             signalNotFull();
         return x;
@@ -681,10 +680,12 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         if (o == null) return false;
         fullyLock();
         try {
+            // 从头遍历寻找 o
             for (Node<E> trail = head, p = trail.next;
                  p != null;
                  trail = p, p = p.next) {
                 if (o.equals(p.item)) {
+                    // 如果找到了，删除
                     unlink(p, trail);
                     return true;
                 }

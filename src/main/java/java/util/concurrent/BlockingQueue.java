@@ -195,6 +195,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws NullPointerException if the specified element is null
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
+     *
+     * 向队列添加元素e，如果有空间可以添加，添加成功返回 true；如果没有空间，直接抛出 IllegalStateException
      */
     boolean add(E e);
 
@@ -214,6 +216,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws NullPointerException if the specified element is null
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
+     *
+     * 向队列添加元素 e，如果有空间可以添加，添加成功返回 true；如果没有空间，返回 false。和 add 方法很像，只不过不是抛异常
      */
     boolean offer(E e);
 
@@ -228,6 +232,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws NullPointerException if the specified element is null
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
+     *
+     * 向队列添加元素 e，如果成功立即返回，如果没有空间，则一直等待。等待可被直接中断
      */
     void put(E e) throws InterruptedException;
 
@@ -248,6 +254,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws NullPointerException if the specified element is null
      * @throws IllegalArgumentException if some property of the specified
      *         element prevents it from being added to this queue
+     *
+     * 向队列添加元素 e，如果有空间可以添加，添加成功返回 true。如果没有空间，则会等待一定时长，如果仍旧没有空间则返回 false
      */
     boolean offer(E e, long timeout, TimeUnit unit)
         throws InterruptedException;
@@ -258,6 +266,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      *
      * @return the head of this queue
      * @throws InterruptedException if interrupted while waiting
+     *
+     * 返回并且从队列中移除 head 元素。如果队列为空，则会阻塞等待直到有元素入队
      */
     E take() throws InterruptedException;
 
@@ -272,6 +282,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @return the head of this queue, or {@code null} if the
      *         specified waiting time elapses before an element is available
      * @throws InterruptedException if interrupted while waiting
+     *
+     * 返回并且从队列中移除 head 元素。如果队列为空，则会阻塞一定的时间，等待元素入队。如果等待时间内还没有元素入队，返回 null
      */
     E poll(long timeout, TimeUnit unit)
         throws InterruptedException;
@@ -288,6 +300,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * insert or remove an element.
      *
      * @return the remaining capacity
+     *
+     * 返回队列的剩余容量
      */
     int remainingCapacity();
 
@@ -298,6 +312,7 @@ public interface BlockingQueue<E> extends Queue<E> {
      * elements.
      * Returns {@code true} if this queue contained the specified element
      * (or equivalently, if this queue changed as a result of the call).
+     * 翻译：从该队列中删除指定元素的单个实例（如果存在）。 更正式地说，如果此队列包含一个或多个这样的元素，则删除元素 e，使 o.equals（e）。如果此队列包含指定的元素（或者等效地，如果此队列由于调用而更改），则返回 true。
      *
      * @param o element to be removed from this queue, if present
      * @return {@code true} if this queue changed as a result of the call
@@ -321,8 +336,10 @@ public interface BlockingQueue<E> extends Queue<E> {
      *         (<a href="../Collection.html#optional-restrictions">optional</a>)
      * @throws NullPointerException if the specified element is null
      *         (<a href="../Collection.html#optional-restrictions">optional</a>)
+     *
+     * 如果队列中至少含有一个元素 equals 对象 o，返回 true
      */
-    public boolean contains(Object o);
+    boolean contains(Object o);
 
     /**
      * Removes all available elements from this queue and adds them
@@ -346,6 +363,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws IllegalArgumentException if the specified collection is this
      *         queue, or some property of an element of this queue prevents
      *         it from being added to the specified collection
+     *
+     * 一次性“榨干”队列，把所有元素 remove 掉，放入集合 c 中
      */
     int drainTo(Collection<? super E> c);
 
@@ -371,6 +390,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * @throws IllegalArgumentException if the specified collection is this
      *         queue, or some property of an element of this queue prevents
      *         it from being added to the specified collection
+     *
+     * 每次 remove 掉 maxElements 个元素，放入集合 c
      */
     int drainTo(Collection<? super E> c, int maxElements);
 }

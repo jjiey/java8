@@ -143,8 +143,6 @@ package java.util;
  */
 public interface Queue<E> extends Collection<E> {
     /**
-     * 新增操作，队列满时抛出异常
-     *
      * Inserts the specified element into this queue if it is possible to do so
      * immediately without violating capacity restrictions, returning
      * {@code true} upon success and throwing an {@code IllegalStateException}
@@ -160,12 +158,12 @@ public interface Queue<E> extends Collection<E> {
      *         this queue does not permit null elements
      * @throws IllegalArgumentException if some property of this element
      *         prevents it from being added to this queue
+     *
+     * 新增操作，队列满时抛异常
      */
     boolean add(E e);
 
     /**
-     * 新增操作，队列满时返回false
-     *
      * Inserts the specified element into this queue if it is possible to do
      * so immediately without violating capacity restrictions.
      * When using a capacity-restricted queue, this method is generally
@@ -181,50 +179,52 @@ public interface Queue<E> extends Collection<E> {
      *         this queue does not permit null elements
      * @throws IllegalArgumentException if some property of this element
      *         prevents it from being added to this queue
+     *
+     * 新增操作，队列满时返回 false
      */
     boolean offer(E e);
 
     /**
-     * 查看并删除操作，队列空时抛异常
-     *
      * Retrieves and removes the head of this queue.  This method differs
      * from {@link #poll poll} only in that it throws an exception if this
      * queue is empty.
      *
      * @return the head of this queue
      * @throws NoSuchElementException if this queue is empty
+     *
+     * 查看并删除操作，队列空时抛异常
      */
     E remove();
 
     /**
-     * 查看并删除操作，队列空时返回null
-     *
      * Retrieves and removes the head of this queue,
      * or returns {@code null} if this queue is empty.
      *
      * @return the head of this queue, or {@code null} if this queue is empty
+     *
+     * 查看并删除操作，队列空时返回 null
      */
     E poll();
 
     /**
-     * 只查看不删除操作，队列空时抛异常
-     *
      * Retrieves, but does not remove, the head of this queue.  This method
      * differs from {@link #peek peek} only in that it throws an exception
      * if this queue is empty.
      *
      * @return the head of this queue
      * @throws NoSuchElementException if this queue is empty
+     *
+     * 只查看不删除操作，队列空时抛异常
      */
     E element();
 
     /**
-     * 只查看不删除操作，队列空时返回null
-     *
      * Retrieves, but does not remove, the head of this queue,
      * or returns {@code null} if this queue is empty.
      *
      * @return the head of this queue, or {@code null} if this queue is empty
+     *
+     * 只查看不删除操作，队列空时返回 null
      */
     E peek();
 }

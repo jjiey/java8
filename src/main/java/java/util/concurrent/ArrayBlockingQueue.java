@@ -180,16 +180,16 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * Deletes item at array index removeIndex.
      * Utility for remove(Object) and iterator.remove.
      * Call only when holding lock.
+     * @param removeIndex 删除位置
      */
-    // 一共有两种情况：
-    // 1：【删除位置】和【下次要拿数据的位置】一致。
-    // 比如 takeIndex = 2，而要删除的位置正好也是 2，那么就把位置 2 的数据置为 null，并重新计算 takeIndex = 3
-    // 2：找到【要删除元素的下一个位置】，计算【要删除元素的下一个位置】和 putIndex 的关系：
+    // 两种情况：
+    // 1：如果【removeIndex】和【takeIndex】一致：比如 takeIndex = 2，而要删除的位置正好也是 2，那么就把位置 2 的数据置为 null，并重新计算 takeIndex = 3
+    // 2：如果【removeIndex 】和【takeIndex】不一致：找到【要删除元素的下一个位置】，计算【要删除元素的下一个位置】和【putIndex】的关系：
     // 2.1：如果下一个元素不是 putIndex，就把下一个元素往前移动一位；最后一步一定会碰到2.2的情况
     // 2.2：如果下一个元素是 putIndex，把 putIndex 的值修改成删除的位置
     void removeAt(final int removeIndex) {
         final Object[] items = this.items;
-        // 情况1 如果【删除位置】 = 【下次要拿数据的位置】
+        // 情况1：如果【removeIndex 删除位置】 = 【takeIndex 下次要拿数据的位置】
         if (removeIndex == takeIndex) {
             // 下次要拿数据的位置直接置空
             items[takeIndex] = null;
@@ -200,7 +200,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             count--;
             if (itrs != null)
                 itrs.elementDequeued();
-        // 情况 2
+        // 情况 2：如果【removeIndex 删除位置】 != 【takeIndex 下次要拿数据的位置】
         } else {
             final int putIndex = this.putIndex;
             for (int i = removeIndex;;) {
@@ -251,8 +251,8 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      *        if {@code false} the access order is unspecified.
      * @throws IllegalArgumentException if {@code capacity < 1}
      */
-    // 公平和非公平指的是读写锁的，比如说现在队列是满的，还有很多线程执行 put 操作，必然会有很多线程等待，在队列不满时，会唤醒等待的线程
-    // fair 如果是 true 话，就会按照线程等待的排队顺序唤醒线程，如果是 false 的话，就会随机唤醒线程
+    // 第二个参数，主要用于读写锁是否公平，如果是公平锁（fair 是 true），锁竞争时就会按照线程等待的排队顺序唤醒线程，如果是非公平锁（fair 是 false），锁竞争就是随机的
+    // 比如说现在队列是满的，还有很多线程执行 put 操作，必然会有很多线程阻塞等待，当有其它线程执行 take 时，会唤醒等待的线程，如果是公平锁，会按照阻塞等待的先后顺序，依次唤醒阻塞的线程，如果是非公平锁，会随机唤醒沉睡的线程
     // 通过利用锁的公平和非公平，来实现了 put 和 take 阻塞被唤醒时的公平和非公平
     public ArrayBlockingQueue(int capacity, boolean fair) {
         if (capacity <= 0)
@@ -293,7 +293,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             // i 代表插入的位置
             int i = 0;
             try {
-                // 此时需要注意的是，如果 c 的大小超过了数组的大小是会抛异常的
+                // 需要注意，如果 c 的大小超过了数组的大小，会抛异常
                 for (E e : c) {
                     checkNotNull(e);
                     items[i++] = e;
@@ -367,8 +367,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         final ReentrantLock lock = this.lock;
         lock.lockInterruptibly();
         try {
-            // 队列如果是满的，就无限等待
-            // 一直等待队列中有数据被拿走时，自己被唤醒
+            // 队列如果是满的，就无限等待。一直等到队列中有数据被拿走时，自己被唤醒
             while (count == items.length)
                 notFull.await();
             enqueue(e);
@@ -377,6 +376,11 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         }
     }
 
+    /**
+     * 元素入队
+     * 在这里维护了 putIndex
+     * @param x 入队元素
+     */
     private void enqueue(E x) {
         // assert lock.getHoldCount() == 1; 同一时刻只能一个线程进行操作此方法
         // assert items[putIndex] == null;
@@ -434,8 +438,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         final ReentrantLock lock = this.lock;
         lock.lockInterruptibly();
         try {
-            // 如果队列为空，无限等待
-            // 直到队列中有数据被 put 后，自己被唤醒
+            // 如果队列为空，无限等待。直到队列中有数据被 put 后，自己被唤醒
             while (count == 0)
                 notEmpty.await();
             // 从队列中拿数据
@@ -445,6 +448,10 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         }
     }
 
+    /**
+     * 从队列中拿数据
+     * @return
+     */
     private E dequeue() {
         // assert lock.getHoldCount() == 1;
         // assert items[takeIndex] != null;

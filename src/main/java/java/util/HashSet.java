@@ -98,12 +98,12 @@ public class HashSet<E>
     static final long serialVersionUID = -5024744406713321676L;
 
     /**
-     * 把 HashMap 组合进来，key 是 Hashset 的 key，value 是下面的 PRESENT
+     * 把 HashMap 组合进来，key 是 HashSet 的 key，value 是下面的 PRESENT
      */
     private transient HashMap<E,Object> map;
 
     // Dummy value to associate with an Object in the backing Map
-    // HashMap 中的 value
+    // HashSet 中 map 属性里的 value
     private static final Object PRESENT = new Object();
 
     /**
@@ -159,6 +159,7 @@ public class HashSet<E>
      * constructor is only used by LinkedHashSet.) The backing
      * HashMap instance is a LinkedHashMap with the specified initial
      * capacity and the specified load factor.
+     * 翻译：构造一个新的空的LinkedHashSet。（这个包的私有构造函数只被LinkedHashSet使用。）支持的HashMap实例是一个LinkedHashMap，它具有指定的初始容量和指定的负载因子。
      *
      * @param      initialCapacity   the initial capacity of the hash map
      * @param      loadFactor        the load factor of the hash map

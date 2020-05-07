@@ -291,6 +291,15 @@ public class Phaser {
      * The phase of a subphaser is allowed to lag that of its
      * ancestors until it is actually accessed -- see method
      * reconcileState.
+     *
+     * 在不同 bit 位保存了 Phaser 状态相关的四种属性：
+     * 1. 0-15 位：还未到达屏障的参与者数量
+     * 2. 16-31 位：参与者数量
+     * 3. 32-62 位：phase 的轮次
+     * 4. 63 位：标识是否被终止
+     *
+     * 不分开保存的原因是多个属性不能通过 CAS 的方式做原子操作
+     * 所以把这些属性组合起来，可以通过 CAS 方式更新确保线程安全，并且变相做到了多个属性更新的原子操作
      */
     private volatile long state;
 
@@ -346,7 +355,9 @@ public class Phaser {
      * use two of them, alternating across even and odd phases.
      * Subphasers share queues with root to speed up releases.
      */
+    // phaser 偶数轮使用的链表
     private final AtomicReference<QNode> evenQ;
+    // phaser 奇数轮使用的链表
     private final AtomicReference<QNode> oddQ;
 
     private AtomicReference<QNode> queueFor(int phase) {
@@ -587,6 +598,7 @@ public class Phaser {
      * @throws IllegalStateException if attempting to register more
      * than the maximum supported number of parties
      */
+    // 参与者数量 +1
     public int register() {
         return doRegister(1);
     }
@@ -610,6 +622,7 @@ public class Phaser {
      * than the maximum supported number of parties
      * @throws IllegalArgumentException if {@code parties < 0}
      */
+    // 批量注册参与者
     public int bulkRegister(int parties) {
         if (parties < 0)
             throw new IllegalArgumentException();
@@ -630,6 +643,7 @@ public class Phaser {
      * @throws IllegalStateException if not terminated and the number
      * of unarrived parties would become negative
      */
+    // 参与者到达屏障点，到达数量 +1。但不会阻塞调用此方法的线程
     public int arrive() {
         return doArrive(ONE_ARRIVAL);
     }
@@ -650,6 +664,7 @@ public class Phaser {
      * @throws IllegalStateException if not terminated and the number
      * of registered or unarrived parties would become negative
      */
+    // 参与者到达屏障点，到达数量 +1。然后从 Phase 注销掉一个参与者，参与者 -1
     public int arriveAndDeregister() {
         return doArrive(ONE_DEREGISTER);
     }
@@ -672,6 +687,7 @@ public class Phaser {
      * @throws IllegalStateException if not terminated and the number
      * of unarrived parties would become negative
      */
+    // 参与者到达屏障点，到达数量 +1。阻塞线程直到所有的参与者到达该 phase 轮次
     public int arriveAndAwaitAdvance() {
         // Specialization of doArrive+awaitAdvance eliminating some reads/paths
         final Phaser root = this.root;
@@ -720,6 +736,7 @@ public class Phaser {
      * negative, or the (negative) {@linkplain #getPhase() current phase}
      * if terminated
      */
+    // 阻塞所有的参与者到达该 phaser 的指定轮次。如果当前轮次和 phase 值不同或者 phase 已被终止时，会立即返回
     public int awaitAdvance(int phase) {
         final Phaser root = this.root;
         long s = (root == this) ? state : reconcileState();
@@ -746,6 +763,7 @@ public class Phaser {
      * if terminated
      * @throws InterruptedException if thread interrupted while waiting
      */
+    // 阻塞所有的参与者到达该 phaser 的指定轮次。如果当前轮次和 phase 值不同或者 phase 已被终止时，会立即返回，但是可以被打断
     public int awaitAdvanceInterruptibly(int phase)
         throws InterruptedException {
         final Phaser root = this.root;
@@ -782,6 +800,7 @@ public class Phaser {
      * @throws InterruptedException if thread interrupted while waiting
      * @throws TimeoutException if timed out while waiting
      */
+    // 阻塞所有的参与者到达该 phaser 的指定轮次。如果当前轮次和 phase 值不同或者 phase 已被终止时，但是只阻塞指定的时长，可以被打断
     public int awaitAdvanceInterruptibly(int phase,
                                          long timeout, TimeUnit unit)
         throws InterruptedException, TimeoutException {
@@ -811,6 +830,7 @@ public class Phaser {
      * coordinating recovery after one or more tasks encounter
      * unexpected exceptions.
      */
+    // 终止当前 phaser，改变其状态为 termination
     public void forceTermination() {
         // Only need to change root state
         final Phaser root = this.root;
@@ -938,6 +958,7 @@ public class Phaser {
      * @param registeredParties the current number of registered parties
      * @return {@code true} if this phaser should terminate
      */
+    // 阶段达成时被调用，子类可以对其重写
     protected boolean onAdvance(int phase, int registeredParties) {
         return registeredParties == 0;
     }

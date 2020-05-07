@@ -55,18 +55,29 @@ import sun.misc.VM;
  */
 public
 class ThreadGroup implements Thread.UncaughtExceptionHandler {
+    // 父 ThreadGroup
     private final ThreadGroup parent;
+    // ThreadGroupr 名称
     String name;
+    // 线程最大优先级
     int maxPriority;
+    // 是否被销毁
     boolean destroyed;
+    // 是否守护线程
     boolean daemon;
+    // 是否可以中断
     boolean vmAllowSuspension;
 
+    // 还未启动的线程
     int nUnstartedThreads = 0;
+    // ThreadGroup中线程数目
     int nthreads;
+    // ThreadGroup中的线程
     Thread threads[];
 
+    // 线程组数目
     int ngroups;
+    // 线程组数组
     ThreadGroup groups[];
 
     /**
@@ -92,6 +103,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
      * @see     java.lang.ThreadGroup#checkAccess()
      * @since   JDK1.0
      */
+    // 默认是以当前 ThreadGroup 传入作为 parent ThreadGroup，新线程组的父线程组是目前正在运行线程的线程组。
     public ThreadGroup(String name) {
         this(Thread.currentThread().getThreadGroup(), name);
     }
@@ -872,6 +884,7 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
 
     /**
      * Adds the specified thread to this thread group.
+     * 翻译：添加特定的线程到该线程组。
      *
      * <p> Note: This method is called from both library code
      * and the Virtual Machine. It is called from VM to add
@@ -885,24 +898,32 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
      */
     void add(Thread t) {
         synchronized (this) {
+            // 如果线程组的销毁标记(destroyed)是true，则抛出IllegalThreadStateException
             if (destroyed) {
                 throw new IllegalThreadStateException();
             }
+            // 如果线程数组为空
             if (threads == null) {
+                // 初始为4个新的线程
                 threads = new Thread[4];
+            // 如果当前线程组已满
             } else if (nthreads == threads.length) {
+                // 扩容至原来的2倍
                 threads = Arrays.copyOf(threads, nthreads * 2);
             }
+            // 将当前线程放入线程数组的末尾
             threads[nthreads] = t;
 
             // This is done last so it doesn't matter in case the
             // thread is killed
+            // 线程数组元素个数+1
             nthreads++;
 
             // The thread is now a fully fledged member of the group, even
             // though it may, or may not, have been started yet. It will prevent
             // the group from being destroyed so the unstarted Threads count is
             // decremented.
+            // 未启动线程数-1
             nUnstartedThreads--;
         }
     }
@@ -921,7 +942,9 @@ class ThreadGroup implements Thread.UncaughtExceptionHandler {
      */
     void threadStartFailed(Thread t) {
         synchronized(this) {
+            // 从线程组中移除该线程
             remove(t);
+            // 未启动线程数+1
             nUnstartedThreads++;
         }
     }
