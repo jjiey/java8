@@ -713,6 +713,7 @@ public final class Float extends Number implements Comparable<Float> {
      * Returns a representation of the specified floating-point value
      * according to the IEEE 754 floating-point "single format" bit
      * layout.
+     * 根据 IEEE 754 浮点“单格式”位布局，返回指定浮点值的表示形式。
      *
      * <p>Bit 31 (the bit that is selected by the mask
      * {@code 0x80000000}) represents the sign of the floating-point
@@ -725,17 +726,22 @@ public final class Float extends Number implements Comparable<Float> {
      *
      * <p>If the argument is positive infinity, the result is
      * {@code 0x7f800000}.
+     * 如果参数为正无穷，则结果为 0x7f800000
      *
      * <p>If the argument is negative infinity, the result is
      * {@code 0xff800000}.
+     * 如果参数为负无穷，则结果为 0xff800000
      *
      * <p>If the argument is NaN, the result is {@code 0x7fc00000}.
+     * 如果参数是 NaN，则结果为 0x7fc00000（同 floatToRawIntBits 的区别）
      *
      * <p>In all cases, the result is an integer that, when given to the
      * {@link #intBitsToFloat(int)} method, will produce a floating-point
      * value the same as the argument to {@code floatToIntBits}
      * (except all NaN values are collapsed to a single
      * "canonical" NaN value).
+     * 在所有情况下，结果都是一个整数，将其赋予 intBitsToFloat(int) 方法将生成一个与 floatToRawIntBits 的参数相同的浮点值
+     * 【(除了所有NaN值都被 分解/折叠 为一个单个“规范”的NaN值)。】（同 floatToRawIntBits 的区别）
      *
      * @param   value   a floating-point number.
      * @return the bits that represent the floating-point number.
@@ -755,6 +761,7 @@ public final class Float extends Number implements Comparable<Float> {
      * Returns a representation of the specified floating-point value
      * according to the IEEE 754 floating-point "single format" bit
      * layout, preserving Not-a-Number (NaN) values.
+     * 根据 IEEE 754 浮点“单格式”位布局，返回指定浮点值的表示形式，【保留非数(NaN)值。】（同 floatToIntBits 的区别）
      *
      * <p>Bit 31 (the bit that is selected by the mask
      * {@code 0x80000000}) represents the sign of the floating-point
@@ -764,23 +771,28 @@ public final class Float extends Number implements Comparable<Float> {
      * Bits 22-0 (the bits that are selected by the mask
      * {@code 0x007fffff}) represent the significand (sometimes called
      * the mantissa) of the floating-point number.
+     * （同上）
      *
      * <p>If the argument is positive infinity, the result is
      * {@code 0x7f800000}.
+     * （同上）
      *
      * <p>If the argument is negative infinity, the result is
      * {@code 0xff800000}.
+     * （同上）
      *
      * <p>If the argument is NaN, the result is the integer representing
      * the actual NaN value.  Unlike the {@code floatToIntBits}
      * method, {@code floatToRawIntBits} does not collapse all the
      * bit patterns encoding a NaN to a single "canonical"
      * NaN value.
+     * 如果参数是 NaN，结果是表示实际NaN值的整数。与 floatToIntBits 方法不同，floatToRawIntBits 方法不会将编码 NaN 的所有位模式折叠为单一的“规范”NaN值。（同 floatToIntBits 的区别）
      *
      * <p>In all cases, the result is an integer that, when given to the
      * {@link #intBitsToFloat(int)} method, will produce a
      * floating-point value the same as the argument to
      * {@code floatToRawIntBits}.
+     * （同上）
      *
      * @param   value   a floating-point number.
      * @return the bits that represent the floating-point number.
@@ -794,12 +806,16 @@ public final class Float extends Number implements Comparable<Float> {
      * The argument is considered to be a representation of a
      * floating-point value according to the IEEE 754 floating-point
      * "single format" bit layout.
+     * 返回与给定位表示相对应的浮点值。
+     * 根据 IEEE 754 浮点“单格式”位布局，该参数被认为是浮点值的表示。
      *
      * <p>If the argument is {@code 0x7f800000}, the result is positive
      * infinity.
+     * 如果参数为 0x7f800000，则结果为正无穷
      *
      * <p>If the argument is {@code 0xff800000}, the result is negative
      * infinity.
+     * 如果参数为 0xff800000，则结果为负无穷
      *
      * <p>If the argument is any value in the range
      * {@code 0x7f800001} through {@code 0x7fffffff} or in
@@ -809,9 +825,12 @@ public final class Float extends Number implements Comparable<Float> {
      * between two NaN values of the same type with different bit
      * patterns.  Distinct values of NaN are only distinguishable by
      * use of the {@code Float.floatToRawIntBits} method.
+     * 如果参数值在 0x7f800001 到 0x7fffffff 或在 0xff800001 到 0xffffffff 之间，则结果为 NaN。
+     * Java 提供的任何 IEEE 754 浮点操作都不能区分具有不同位模式的两个同类型 NaN 值，不同的 NaN 值只能使用 Float.floatToRawIntBits 方法区分
      *
      * <p>In all other cases, let <i>s</i>, <i>e</i>, and <i>m</i> be three
      * values that can be computed from the argument:
+     * 在所有其他情况下，s</i>, e</i>, 和 m 是三个可以从参数中计算出来的值:
      *
      * <blockquote><pre>{@code
      * int s = ((bits >> 31) == 0) ? 1 : -1;
@@ -823,6 +842,7 @@ public final class Float extends Number implements Comparable<Float> {
      *
      * Then the floating-point result equals the value of the mathematical
      * expression <i>s</i>&middot;<i>m</i>&middot;2<sup><i>e</i>-150</sup>.
+     * 然后浮点数的值等于 s * m * 2 ^ (e-150) 数学表达式的值
      *
      * <p>Note that this method may not be able to return a
      * {@code float} NaN with exactly same bit pattern as the

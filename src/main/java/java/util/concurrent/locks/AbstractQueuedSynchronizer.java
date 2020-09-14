@@ -363,7 +363,7 @@ public abstract class AbstractQueuedSynchronizer
         // 表示后续结点会传播唤醒的操作，共享模式下起作用
         static final int PROPAGATE = -3;
 
-        // 当前节点的线程
+        // 当前节点所代表的线程
         volatile Thread thread;
 
         // 在同步队列中，nextWaiter 并不表示其下一个节点元素，用 next 表示其下一个节点元素，nextWaiter 只是表示当前 Node 是排他模式还是共享模式

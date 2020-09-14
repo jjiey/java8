@@ -31,6 +31,9 @@ import java.util.ArrayList ;
  * keys to arbitrary objects.  This should only be used for
  * keys in the range 0..max such that "most" of the key space is actually
  * used.
+ *
+ * 用于 管理从 密集分配的整型 key 到任意对象 的映射 的实用程序。
+ * 这应该只用于 keys 的范围在 0..max 之间 such that “大部分”的 key 空间被实际使用。
  */
 public class DenseIntMapImpl
 {

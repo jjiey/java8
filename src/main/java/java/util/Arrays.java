@@ -108,6 +108,7 @@ public class Arrays {
     /**
      * Checks that {@code fromIndex} and {@code toIndex} are in
      * the range and throws an exception if they aren't.
+     * 检查 fromIndex 和 toIndex 是否在范围内，如果不在，则抛出异常。
      */
     private static void rangeCheck(int arrayLength, int fromIndex, int toIndex) {
         if (fromIndex > toIndex) {
@@ -1849,9 +1850,13 @@ public class Arrays {
      * is not sorted, the results are undefined.  If the array contains
      * multiple elements with the specified value, there is no guarantee which
      * one will be found.
+     * 使用二分查找算法在指定的 int 数组中搜索指定的值。
+     * 在调用该方法之前，数组必须是排好序的(可以通过 sort(int[]) 方法)。
+     * 如果数组不是有序的，那么结果是不确定的。
+     * 如果数组中包含多个指定值的元素，不能保证找到的是哪个。
      *
-     * @param a the array to be searched
-     * @param key the value to be searched for
+     * @param a the array to be searched 要搜索的数组
+     * @param key the value to be searched for 要搜索的值
      * @return index of the search key, if it is contained in the array;
      *         otherwise, <tt>(-(<i>insertion point</i>) - 1)</tt>.  The
      *         <i>insertion point</i> is defined as the point at which the
@@ -1860,6 +1865,9 @@ public class Arrays {
      *         elements in the array are less than the specified key.  Note
      *         that this guarantees that the return value will be &gt;= 0 if
      *         and only if the key is found.
+     *         如果数组中存在要查找的 key，返回 key 在数组中的索引；否则，返回 -(插入点 - 1)。
+     *         插入点的定义是 key 将被插入到数组中的点：大于 key 的第一个元素的索引，或者，如果数组中的所有元素都小于指定的 key 返回 a.length。
+     *         注意，这保证了当且仅当找到 key 时，返回值才 >= 0
      */
     public static int binarySearch(int[] a, int key) {
         return binarySearch0(a, 0, a.length, key);
@@ -1875,12 +1883,15 @@ public class Arrays {
      * is not sorted, the results are undefined.  If the range contains
      * multiple elements with the specified value, there is no guarantee which
      * one will be found.
+     * 使用二分查找算法在指定的 int 数组的范围中搜索指定的值。
+     * 在调用该方法之前，范围必须是排好序的(可以通过 sort(int[], int, int) 方法)。
+     * 如果范围不是有序的，那么结果是不确定的。
+     * 如果范围中包含多个指定值的元素，不能保证找到的是哪个。
      *
-     * @param a the array to be searched
-     * @param fromIndex the index of the first element (inclusive) to be
-     *          searched
-     * @param toIndex the index of the last element (exclusive) to be searched
-     * @param key the value to be searched for
+     * @param a the array to be searched 要搜索的数组
+     * @param fromIndex the index of the first element (inclusive) to be searched 要搜索的第一个元素(包括在范围内)的索引
+     * @param toIndex the index of the last element (exclusive) to be searched 要搜索的最后一个元素(不包括在范围内)的索引
+     * @param key the value to be searched for 要搜索的值
      * @return index of the search key, if it is contained in the array
      *         within the specified range;
      *         otherwise, <tt>(-(<i>insertion point</i>) - 1)</tt>.  The
@@ -1891,10 +1902,13 @@ public class Arrays {
      *         elements in the range are less than the specified key.  Note
      *         that this guarantees that the return value will be &gt;= 0 if
      *         and only if the key is found.
+     *         如果数组指定的范围中存在要查找的 key，返回 key 在数组范围中的索引；否则，返回 -(插入点 - 1)。
+     *         插入点的定义是 key 将被插入到数组中的点：数组范围中大于 key 的第一个元素的索引，或者，如果数组范围中的所有元素都小于指定的 key 返回 toIndex。
+     *         注意，这保证了当且仅当找到 key 时，返回值才 >= 0
      * @throws IllegalArgumentException
-     *         if {@code fromIndex > toIndex}
+     *         if {@code fromIndex > toIndex} 如果 fromIndex > toIndex 抛出 IllegalArgumentException
      * @throws ArrayIndexOutOfBoundsException
-     *         if {@code fromIndex < 0 or toIndex > a.length}
+     *         if {@code fromIndex < 0 or toIndex > a.length} 如果 fromIndex < 0 或 toIndex > a.length 抛出 ArrayIndexOutOfBoundsException
      * @since 1.6
      */
     public static int binarySearch(int[] a, int fromIndex, int toIndex,
@@ -2534,31 +2548,28 @@ public class Arrays {
     // Like public version, but without range checks.
     private static <T> int binarySearch0(T[] a, int fromIndex, int toIndex,
                                          T key, Comparator<? super T> c) {
-        // 如果比较器 c 是空的，直接使用 key 默认的 compareTo 方法进行排序。
-        // 假设 key 类型是 String 类型，那么就会使用 String 的 compareTo 方法进行排序
+        // 如果比较器 c 是空的，直接使用 key 默认的 Comparable.compareTo 方法进行排序
+        // 假设 key 是 String 类型，那么就会使用 String 的 compareTo 方法进行排序（String 默认实现了 Comparable 接口）
         if (c == null) {
+            // 使用内部排序器进行比较
             return binarySearch0(a, fromIndex, toIndex, key);
         }
         int low = fromIndex;
         int high = toIndex - 1;
-        // 开始位置小于结束位置，就会一直循环搜索
         while (low <= high) {
-            // 假设 low =0，high =10，那么 mid 就是 5，所以说二分的意思主要在这里
             int mid = (low + high) >>> 1;
             T midVal = a[mid];
-            // 比较数组中间值和给定的值的大小关系
+            // 比较数组中间值 midVal 和给定值 key 的大小关系
             int cmp = c.compare(midVal, key);
-            // 如果数组中间值小于给定的值，说明我们要找的值在中间值的右边
+            // 如果 midVal 小于 key，说明要找的值在 key 的右边
             if (cmp < 0)
                 low = mid + 1;
-            // 我们要找的值在中间值的左边
+            // 如果 midVal 大于 key，说明要找的值在 key 的左边
             else if (cmp > 0)
                 high = mid - 1;
             else
-            // 找到了
                 return mid; // key found
         }
-        // 返回的值是负数，表示没有找到
         return -(low + 1);  // key not found.
     }
 

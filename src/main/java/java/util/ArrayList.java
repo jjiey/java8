@@ -113,12 +113,21 @@ public class ArrayList<E> extends AbstractList<E>
   private static final long serialVersionUID = 8683452581122892189L;
 
   /**
+   * Default initial capacity.
    * 数组初始大小默认10
    */
   private static final int DEFAULT_CAPACITY = 10;
-  // 数组存放的容器
-  private static final Object[] EMPTY_ELEMENTDATA = {};
+
   /**
+   * Shared empty array instance used for empty instances.
+   * 用于空实例的共享空数组实例
+   *
+   * 数组存放的容器
+   */
+  private static final Object[] EMPTY_ELEMENTDATA = {};
+
+  /**
+   * The size of the ArrayList (the number of elements it contains).
    * 当前数组大小
    * 没有使用 volatile 修饰，非线程安全
    */
