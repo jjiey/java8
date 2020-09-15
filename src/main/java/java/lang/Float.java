@@ -51,6 +51,7 @@ public final class Float extends Number implements Comparable<Float> {
      * A constant holding the positive infinity of type
      * {@code float}. It is equal to the value returned by
      * {@code Float.intBitsToFloat(0x7f800000)}.
+     * 正无穷。也等于 Float.intBitsToFloat(0x7f800000)
      */
     public static final float POSITIVE_INFINITY = 1.0f / 0.0f;
 
@@ -58,6 +59,7 @@ public final class Float extends Number implements Comparable<Float> {
      * A constant holding the negative infinity of type
      * {@code float}. It is equal to the value returned by
      * {@code Float.intBitsToFloat(0xff800000)}.
+     * 负无穷。也等于 Float.intBitsToFloat(0xff800000)
      */
     public static final float NEGATIVE_INFINITY = -1.0f / 0.0f;
 
@@ -65,6 +67,7 @@ public final class Float extends Number implements Comparable<Float> {
      * A constant holding a Not-a-Number (NaN) value of type
      * {@code float}.  It is equivalent to the value returned by
      * {@code Float.intBitsToFloat(0x7fc00000)}.
+     * 非数。也等于 Float.intBitsToFloat(0x7fc00000)
      */
     public static final float NaN = 0.0f / 0.0f;
 
@@ -74,6 +77,7 @@ public final class Float extends Number implements Comparable<Float> {
      * It is equal to the hexadecimal floating-point literal
      * {@code 0x1.fffffeP+127f} and also equal to
      * {@code Float.intBitsToFloat(0x7f7fffff)}.
+     * 最大正有限值。也等于 (2 - 2 ^ -23) * 2 ^ 127；也等于十六进制浮点数 0x1.fffffeP+127f；也等于 Float.intBitsToFloat(0x7f7fffff)
      */
     public static final float MAX_VALUE = 0x1.fffffeP+127f; // 3.4028235e+38f
 
@@ -82,6 +86,7 @@ public final class Float extends Number implements Comparable<Float> {
      * {@code float}, 2<sup>-126</sup>.  It is equal to the
      * hexadecimal floating-point literal {@code 0x1.0p-126f} and also
      * equal to {@code Float.intBitsToFloat(0x00800000)}.
+     * 最小正标准值。也等于 2 ^ -126；也等于十六进制浮点数 0x1.0p-126f；也等于 Float.intBitsToFloat(0x00800000)
      *
      * @since 1.6
      */
@@ -92,6 +97,7 @@ public final class Float extends Number implements Comparable<Float> {
      * {@code float}, 2<sup>-149</sup>. It is equal to the
      * hexadecimal floating-point literal {@code 0x0.000002P-126f}
      * and also equal to {@code Float.intBitsToFloat(0x1)}.
+     * 最小正非零值。也等于 2 ^ -149；也等于十六进制浮点数 0x0.000002P-126f；也等于 Float.intBitsToFloat(0x1)
      */
     public static final float MIN_VALUE = 0x0.000002P-126f; // 1.4e-45f
 
@@ -99,6 +105,7 @@ public final class Float extends Number implements Comparable<Float> {
      * Maximum exponent a finite {@code float} variable may have.  It
      * is equal to the value returned by {@code
      * Math.getExponent(Float.MAX_VALUE)}.
+     * 最大指数。也等于 Math.getExponent(Float.MAX_VALUE)
      *
      * @since 1.6
      */
@@ -108,6 +115,7 @@ public final class Float extends Number implements Comparable<Float> {
      * Minimum exponent a normalized {@code float} variable may have.
      * It is equal to the value returned by {@code
      * Math.getExponent(Float.MIN_NORMAL)}.
+     * 最小指数。也等于 Math.getExponent(Float.MIN_NORMAL)
      *
      * @since 1.6
      */
@@ -115,6 +123,7 @@ public final class Float extends Number implements Comparable<Float> {
 
     /**
      * The number of bits used to represent a {@code float} value.
+     * 位数
      *
      * @since 1.5
      */
@@ -122,6 +131,7 @@ public final class Float extends Number implements Comparable<Float> {
 
     /**
      * The number of bytes used to represent a {@code float} value.
+     * 字节数: 32(位数) / 8
      *
      * @since 1.8
      */
@@ -733,7 +743,7 @@ public final class Float extends Number implements Comparable<Float> {
      * 如果参数为负无穷，则结果为 0xff800000
      *
      * <p>If the argument is NaN, the result is {@code 0x7fc00000}.
-     * 如果参数是 NaN，则结果为 0x7fc00000（同 floatToRawIntBits 的区别）
+     * 如果参数是 NaN，则结果为 0x7fc00000【同 floatToRawIntBits 的区别】
      *
      * <p>In all cases, the result is an integer that, when given to the
      * {@link #intBitsToFloat(int)} method, will produce a floating-point
@@ -741,7 +751,7 @@ public final class Float extends Number implements Comparable<Float> {
      * (except all NaN values are collapsed to a single
      * "canonical" NaN value).
      * 在所有情况下，结果都是一个整数，将其赋予 intBitsToFloat(int) 方法将生成一个与 floatToRawIntBits 的参数相同的浮点值
-     * 【(除了所有NaN值都被 分解/折叠 为一个单个“规范”的NaN值)。】（同 floatToRawIntBits 的区别）
+     * (除了所有NaN值都被 分解/折叠 为一个单个“规范”的NaN值)。【同 floatToRawIntBits 的区别】
      *
      * @param   value   a floating-point number.
      * @return the bits that represent the floating-point number.
@@ -750,6 +760,7 @@ public final class Float extends Number implements Comparable<Float> {
         int result = floatToRawIntBits(value);
         // Check for NaN based on values of bit fields, maximum
         // exponent and nonzero significand.
+        // 基于（阶码的）位字段的值检查 NaN，最大指数和非零有效值。
         if ( ((result & FloatConsts.EXP_BIT_MASK) ==
               FloatConsts.EXP_BIT_MASK) &&
              (result & FloatConsts.SIGNIF_BIT_MASK) != 0)
@@ -761,7 +772,7 @@ public final class Float extends Number implements Comparable<Float> {
      * Returns a representation of the specified floating-point value
      * according to the IEEE 754 floating-point "single format" bit
      * layout, preserving Not-a-Number (NaN) values.
-     * 根据 IEEE 754 浮点“单格式”位布局，返回指定浮点值的表示形式，【保留非数(NaN)值。】（同 floatToIntBits 的区别）
+     * 根据 IEEE 754 浮点“单格式”位布局，返回指定浮点值的表示形式，保留非数(NaN)值。【同 floatToIntBits 的区别】
      *
      * <p>Bit 31 (the bit that is selected by the mask
      * {@code 0x80000000}) represents the sign of the floating-point
@@ -786,7 +797,7 @@ public final class Float extends Number implements Comparable<Float> {
      * method, {@code floatToRawIntBits} does not collapse all the
      * bit patterns encoding a NaN to a single "canonical"
      * NaN value.
-     * 如果参数是 NaN，结果是表示实际NaN值的整数。与 floatToIntBits 方法不同，floatToRawIntBits 方法不会将编码 NaN 的所有位模式折叠为单一的“规范”NaN值。（同 floatToIntBits 的区别）
+     * 如果参数是 NaN，结果是表示实际NaN值的整数。与 floatToIntBits 方法不同，floatToRawIntBits 方法不会将编码 NaN 的所有位模式折叠为单一的“规范”NaN值。【同 floatToIntBits 的区别】
      *
      * <p>In all cases, the result is an integer that, when given to the
      * {@link #intBitsToFloat(int)} method, will produce a
@@ -925,15 +936,16 @@ public final class Float extends Number implements Comparable<Float> {
      */
     public static int compare(float f1, float f2) {
         if (f1 < f2)
-            return -1;           // Neither val is NaN, thisVal is smaller
+            return -1;           // Neither val is NaN, thisVal is smaller   f1 和 f2 都不是NaN，f1 较小
         if (f1 > f2)
-            return 1;            // Neither val is NaN, thisVal is larger
+            return 1;            // Neither val is NaN, thisVal is larger   f1 和 f2 都不是NaN，f1 较大
 
         // Cannot use floatToRawIntBits because of possibility of NaNs.
+        // 不能使用 floatToRawIntBits 方法因为存在 NaN 的可能性
         int thisBits    = Float.floatToIntBits(f1);
         int anotherBits = Float.floatToIntBits(f2);
 
-        return (thisBits == anotherBits ?  0 : // Values are equal
+        return (thisBits == anotherBits ?  0 : // Values are equal   f1 和 f2 相等
                 (thisBits < anotherBits ? -1 : // (-0.0, 0.0) or (!NaN, NaN)
                  1));                          // (0.0, -0.0) or (NaN, !NaN)
     }
