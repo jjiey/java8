@@ -464,6 +464,7 @@ public final class Float extends Number implements Comparable<Float> {
     /**
      * Returns {@code true} if the specified number is a
      * Not-a-Number (NaN) value, {@code false} otherwise.
+     * 如果指定数字是一个 NaN 值则返回 true，否则返回 false。
      *
      * @param   v   the value to be tested.
      * @return  {@code true} if the argument is NaN;
@@ -654,6 +655,7 @@ public final class Float extends Number implements Comparable<Float> {
      * by the method {@link #floatToIntBits(float)}, of the primitive
      * {@code float} value represented by this {@code Float}
      * object.
+     * 返回此 Float 对象的 hashCode。结果是整数位表示，与此 Float 对象表示的原始 float 值通过 floatToIntBits(float) 方法所产生的结果完全相同。
      *
      * @return a hash code value for this object.
      */
@@ -665,6 +667,7 @@ public final class Float extends Number implements Comparable<Float> {
     /**
      * Returns a hash code for a {@code float} value; compatible with
      * {@code Float.hashCode()}.
+     * 返回 float 值的 hashCode，与 Float.hashCode() 兼容。
      *
      * @param value the value to hash
      * @return a hash code value for a {@code float} value.
@@ -715,6 +718,7 @@ public final class Float extends Number implements Comparable<Float> {
      * @see java.lang.Float#floatToIntBits(float)
      */
     public boolean equals(Object obj) {
+        // 两个值都是 Float 类型，且​ floatToIntBits 产生的结果相等
         return (obj instanceof Float)
                && (floatToIntBits(((Float)obj).value) == floatToIntBits(value));
     }
@@ -743,7 +747,7 @@ public final class Float extends Number implements Comparable<Float> {
      * 如果参数为负无穷，则结果为 0xff800000
      *
      * <p>If the argument is NaN, the result is {@code 0x7fc00000}.
-     * 如果参数是 NaN，则结果为 0x7fc00000【同 floatToRawIntBits 的区别】
+     * 如果参数为 NaN，则结果为 0x7fc00000【同 floatToRawIntBits 的区别】
      *
      * <p>In all cases, the result is an integer that, when given to the
      * {@link #intBitsToFloat(int)} method, will produce a floating-point

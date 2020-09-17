@@ -1865,7 +1865,7 @@ public class Arrays {
      *         elements in the array are less than the specified key.  Note
      *         that this guarantees that the return value will be &gt;= 0 if
      *         and only if the key is found.
-     *         如果数组中存在要查找的 key，返回 key 在数组中的索引；否则，返回 -(插入点 - 1)。
+     *         如果数组中存在要查找的 key，返回 key 在数组中的索引；否则，返回 -(插入点) - 1。
      *         插入点的定义是 key 将被插入到数组中的点：大于 key 的第一个元素的索引，或者，如果数组中的所有元素都小于指定的 key 返回 a.length。
      *         注意，这保证了当且仅当找到 key 时，返回值才 >= 0
      */
@@ -1902,7 +1902,7 @@ public class Arrays {
      *         elements in the range are less than the specified key.  Note
      *         that this guarantees that the return value will be &gt;= 0 if
      *         and only if the key is found.
-     *         如果数组指定的范围中存在要查找的 key，返回 key 在数组范围中的索引；否则，返回 -(插入点 - 1)。
+     *         如果数组指定的范围中存在要查找的 key，返回 key 在数组范围中的索引；否则，返回 -(插入点) - 1。
      *         插入点的定义是 key 将被插入到数组中的点：数组范围中大于 key 的第一个元素的索引，或者，如果数组范围中的所有元素都小于指定的 key 返回 toIndex。
      *         注意，这保证了当且仅当找到 key 时，返回值才 >= 0
      * @throws IllegalArgumentException
